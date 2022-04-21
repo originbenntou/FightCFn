@@ -33,7 +33,8 @@ Resources:
       EnableDnsHostnames: true # TODO: falseにしたい
       CidrBlock: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
       Tags:
-        Name: !Ref ProjectName
+        - Key: 'ProjectName'
+          Value: !Ref ProjectName
 
   PublicSubnetA:
     Type: AWS::EC2::Subnet
@@ -96,15 +97,15 @@ Resources:
       RouteTableId: !Ref 'PublicRouteTable'
       DestinationCidrBlock: '0.0.0.0/0'
       GatewayId: !Ref 'InternetGateway'
-  PublicSubnetOneRouteTableAssociation:
+  PublicSubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetOne
+      SubnetId: !Ref PublicSubnetA
       RouteTableId: !Ref PublicRouteTable
-  PublicSubnetTwoRouteTableAssociation:
+  PublicSubnetCRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetTwo
+      SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
 
   # Setup networking resources for the private subnets. Containers
@@ -125,12 +126,12 @@ Resources:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGatewayOneAttachment.AllocationId
-      SubnetId: !Ref PublicSubnetOne
+      SubnetId: !Ref PublicSubnetA
   NatGatewayTwo:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGatewayTwoAttachment.AllocationId
-      SubnetId: !Ref PublicSubnetTwo
+      SubnetId: !Ref PublicSubnetC
   PrivateRouteTableOne:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -145,7 +146,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTableOne
-      SubnetId: !Ref PrivateSubnetOne
+      SubnetId: !Ref PrivateSubnetA
   PrivateRouteTableTwo:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -160,7 +161,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTableTwo
-      SubnetId: !Ref PrivateSubnetTwo
+      SubnetId: !Ref PrivateSubnetC
 
   # OPTIONAL: VPC Endpoint for DynamoDB
   # If a container needs to access DynamoDB this allows a container in the private subnet
@@ -253,8 +254,8 @@ Resources:
       Subnets:
         # The load balancer is placed into the public subnets, so that traffic
         # from the internet can reach the load balancer directly via the internet gateway
-        - !Ref PublicSubnetOne
-        - !Ref PublicSubnetTwo
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetC
       SecurityGroups: [!Ref 'PublicLoadBalancerSG']
   # A dummy target group is used to setup the ALB to just drop traffic
   # initially, before any real service target groups have been added.
@@ -308,8 +309,8 @@ Resources:
       Subnets:
         # This load balancer is put into the private subnet, so that there is no
         # route for the public to even be able to access the private load balancer.
-        - !Ref PrivateSubnetOne
-        - !Ref PrivateSubnetTwo
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetC
       SecurityGroups: [!Ref 'PrivateLoadBalancerSG']
   # This dummy target group is used to setup the ALB to just drop traffic
   # initially, before any real service target groups have been added.
@@ -449,26 +450,26 @@ Outputs:
     Value: !Ref 'VPC'
     Export:
       Name: !Join [ ':', [ !Ref 'AWS::StackName', 'VPCId' ] ]
-  PublicSubnetOne:
+  PublicSubnetA:
     Description: Public subnet one
-    Value: !Ref 'PublicSubnetOne'
+    Value: !Ref 'PublicSubnetA'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicSubnetOne' ] ]
-  PublicSubnetTwo:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicSubnetA' ] ]
+  PublicSubnetC:
     Description: Public subnet two
-    Value: !Ref 'PublicSubnetTwo'
+    Value: !Ref 'PublicSubnetC'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicSubnetTwo' ] ]
-  PrivateSubnetOne:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicSubnetC' ] ]
+  PrivateSubnetA:
     Description: Private subnet one
-    Value: !Ref 'PrivateSubnetOne'
+    Value: !Ref 'PrivateSubnetA'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetOne' ] ]
-  PrivateSubnetTwo:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetA' ] ]
+  PrivateSubnetC:
     Description: Private subnet two
-    Value: !Ref 'PrivateSubnetTwo'
+    Value: !Ref 'PrivateSubnetC'
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetTwo' ] ]
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetC' ] ]
   FargateContainerSecurityGroup:
     Description: A security group used to allow Fargate containers to receive traffic
     Value: !Ref 'FargateContainerSecurityGroup'

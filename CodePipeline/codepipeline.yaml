@@ -8,21 +8,6 @@ Parameters:
     Default: "743530693495"
 
 Resources:
-#  RepoBucket:
-#    Type: AWS::S3::Bucket
-
-  CodeCommitRepository:
-    Type: AWS::CodeCommit::Repository
-    Properties:
-      RepositoryName: test-repository
-      RepositoryDescription: Test Repository with Code
-#      Code:
-#        BranchName: main
-#        S3:
-#          Bucket: !Ref RepoBucket
-#          Key: test
-#          ObjectVersion: 1
-
   Repository:
     Type: AWS::ECR::Repository
     Properties:

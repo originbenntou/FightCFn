@@ -78,7 +78,7 @@ Resources:
         - Name: !Ref 'ServiceName'
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
-          Image: !Ref 'ImageUrl'
+          Image: public.ecr.aws/nginx/nginx:1-alpine-perl
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
 
@@ -106,9 +106,9 @@ Resources:
                 !Join [':', [!Ref 'StackName', 'FargateContainerSecurityGroup']]
           Subnets:
             - Fn::ImportValue:
-                !Join [':', [!Ref 'StackName', 'PrivateSubnetOne']]
+                !Join [':', [!Ref 'StackName', 'PrivateSubnetA']]
             - Fn::ImportValue:
-                !Join [':', [!Ref 'StackName', 'PrivateSubnetTwo']]
+                !Join [':', [!Ref 'StackName', 'PrivateSubnetC']]
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
         - ContainerName: !Ref 'ServiceName'
