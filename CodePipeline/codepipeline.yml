@@ -2,30 +2,67 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >
   codepipeline!
 
-Parameters:
-  AccountID:
-    Type: String
-    Default: "743530693495"
+#Parameters:
+#  AccountID:
+#    Type: String
+#    Default: "743530693495"
 
 Resources:
-  Repository:
+  # FIXME: 分離すべき
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      Tags:
+        - Key: ProjectName
+          Value: fight
+      RepositoryName: fight
+      RepositoryDescription: fight-repository
+      Code:
+        BranchName: main
+        S3:
+          Bucket: fight-codecommit-dev
+          Key: fight.zip
+
+  # FIXME: 分離すべき
+  ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: "sample_repository"
+      Tags:
+        - Key: ProjectName
+          Value: fight
+      RepositoryName: fight
+      ImageTagMutability: IMMUTABLE
       RepositoryPolicyText:
         Version: "2012-10-17"
         Statement:
-          -
-            Sid: cfnSample
-            Effect: "Allow"
+          - Effect: "Allow"
             Principal:
               AWS:
-                - !Join ["", ["arn:aws:iam::", !Ref AccountID, ":root"]]
+                - !Join ["", ["arn:aws:iam::", !Ref AWS::AccountId, ":root"]]
             Action:
-              - "ecr:GetDownloadUrlForLayer"
-              - "ecr:BatchGetImage"
-              - "ecr:BatchCheckLayerAvailability"
+              - ecr:BatchGetImage
+              - ecr:PutImage
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchCheckLayerAvailability
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+              - ecr:GetAuthorizationToken
 
+  #####################################
+  # Artifact Bucket for CodePipeline
+  #####################################
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: fight-artifact-bucket
+      Tags:
+        - Key: ProjectName
+          Value: fight
+
+  #####################################
+  # IAM Role for CodeBuild,CodePipeline,CodeDeploy
+  #####################################
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -38,7 +75,7 @@ Resources:
               Service: codebuild.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: root
+        - PolicyName: CodeBuildServiceRolePolicy
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -48,15 +85,27 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                  - dynamodb:*
-                  - ses:*
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
               - Resource: !Sub arn:aws:s3:::${ArtifactBucket}/*
                 Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:GetObjectVersion
-
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -69,7 +118,7 @@ Resources:
               Service: codepipeline.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: root
+        - PolicyName: CodePipelineServiceRolePolicy
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -108,7 +157,6 @@ Resources:
                 Effect: Allow
                 Action:
                   - ssm:PutParameter
-
   CodeDeployServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -121,41 +169,54 @@ Resources:
               Service: codedeploy.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
-
-  ArtifactBucket:
-    Type: AWS::S3::Bucket
+        - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
+      Tags:
+        - Key: ProjectName
+          Value: fight
+      Name: fight-codebuild-project
+      ServiceRole: !Ref CodeBuildServiceRole
       Artifacts:
         Type: CODEPIPELINE
       Source:
         Type: CODEPIPELINE
+        # BuildSpec: "fight/buildspec.yml"
       Environment:
+        PrivilegedMode: true
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/nodejs:6.3.1
+        Image: "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
         Type: LINUX_CONTAINER
-      Name: !Ref AWS::StackName
-      ServiceRole: !Ref CodeBuildServiceRole
+        EnvironmentVariables:
+          - Type: PLAINTEXT
+            Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Type: PLAINTEXT
+            Name: IMAGE_REPO_NAME
+            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/fight"
+      TimeoutInMinutes: 5
+      QueuedTimeoutInMinutes: 5
+      # LogsConfig: ...
 
-  CodeDeployAplication:
-    Type: AWS::CodeDeploy::Application
-    Properties:
-      ApplicationName: "build-test-app"
-
-  CodeDeployGroup:
-    Type: AWS::CodeDeploy::DeploymentGroup
-    Properties:
-      ApplicationName: !Ref CodeDeployAplication
-      DeploymentGroupName: "build-test-group"
-      DeploymentConfigName: CodeDeployDefault.OneAtATime
-      Ec2TagFilters:
-        - Type: KEY_AND_VALUE
-          Key: "Name"
-          Value: "docker-ue1"
-      ServiceRoleArn: !GetAtt [CodeDeployServiceRole, Arn]
+#  CodeDeployAplication:
+#    Type: AWS::CodeDeploy::Application
+#    Properties:
+#      ApplicationName: "build-test-app"
+#
+#  CodeDeployGroup:
+#    Type: AWS::CodeDeploy::DeploymentGroup
+#    Properties:
+#      ApplicationName: !Ref CodeDeployAplication
+#      DeploymentGroupName: "build-test-group"
+#      DeploymentConfigName: CodeDeployDefault.OneAtATime
+#      Ec2TagFilters:
+#        - Type: KEY_AND_VALUE
+#          Key: "Name"
+#          Value: "docker-ue1"
+#      ServiceRoleArn: !GetAtt [CodeDeployServiceRole, Arn]
+#
 
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -194,17 +255,17 @@ Resources:
                 - Name: App
               OutputArtifacts:
                 - Name: MyApp
-        - Name: Deploy
-          Actions:
-            - Name: Deploy
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CodeDeploy
-              Configuration:
-                ApplicationName: !Ref CodeDeployAplication
-                DeploymentGroupName: !Ref CodeDeployGroup
-              RunOrder: 1
-              InputArtifacts:
-                - Name: MyApp
+#        - Name: Deploy
+#          Actions:
+#            - Name: Deploy
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Version: 1
+#                Provider: CodeDeploy
+#              Configuration:
+#                ApplicationName: !Ref CodeDeployAplication
+#                DeploymentGroupName: !Ref CodeDeployGroup
+#              RunOrder: 1
+#              InputArtifacts:
+#                - Name: MyApp
