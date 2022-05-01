@@ -1,29 +1,52 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  ECS on Fargate Cluster Demo
+  Network resource template
+
+# Metadata:
 
 Parameters:
   ProjectName:
     Type: String
     Default: fight
     Description: Project Name
+  Env:
+    Type: String
+    Default: dev
+    Description: Environment
+
+Mappings:
+  SubnetConfig:
+    CIDR:
+      VPC: '10.0.0.0/16'
+      PublicSubnetA: '10.0.0.0/24'
+      PublicSubnetC: '10.0.1.0/24'
+      PrivateSubnetA: '10.0.8.0/24'
+      PrivateSubnetC: '10.0.9.0/24'
+      PrivateSubnetADB: '10.0.16.0/24'
+      PrivateSubnetCDB: '10.0.17.0/24'
+      PublicSubnetABastion: '10.0.240.0/24'
+      PublicSubnetCBastion: '10.0.241.0/24'
+
+# Conditions:
+# Transform:
 
 Resources:
   #########################################
-  # VPC 10.0.0.0/16
+  # VPC
   #########################################
   VPC:
     Type: AWS::EC2::VPC
     Properties:
       EnableDnsSupport: true # TODO: 固定IPが必要ないならfalseにしたい
       EnableDnsHostnames: true # TODO: falseにしたい
-      CidrBlock: '10.0.0.0/16'
+      CidrBlock: !FindInMap [SubnetConfig, CIDR, VPC]
       Tags:
         - Key: 'ProjectName'
           Value: !Ref ProjectName
 
   #########################################
   # PublicSubnet A,C
+  # For Ingress
   #########################################
   PublicSubnetA:
     Type: AWS::EC2::Subnet
@@ -33,7 +56,7 @@ Resources:
           - 0
           - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref VPC
-      CidrBlock: '10.0.0.0/24'
+      CidrBlock: !FindInMap [SubnetConfig, CIDR, PublicSubnetA]
       # MapPublicIpOnLaunch: true
       Tags:
         - Key: 'ProjectName'
@@ -46,7 +69,7 @@ Resources:
           - 2
           - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref VPC
-      CidrBlock: '10.0.1.0/24'
+      CidrBlock: !FindInMap [SubnetConfig, CIDR, PublicSubnetC]
       # MapPublicIpOnLaunch: true
       Tags:
         - Key: 'ProjectName'
@@ -54,6 +77,7 @@ Resources:
 
   #########################################
   # PrivateSubnet A,C
+  # For ECS Task
   #########################################
   PrivateSubnetA:
     Type: AWS::EC2::Subnet
@@ -63,7 +87,7 @@ Resources:
           - 0
           - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref VPC
-      CidrBlock: '10.0.8.0/24'
+      CidrBlock: !FindInMap [SubnetConfig, CIDR, PrivateSubnetA]
       Tags:
         - Key: 'ProjectName'
           Value: !Ref ProjectName
@@ -75,7 +99,7 @@ Resources:
           - 2
           - Fn::GetAZs: {Ref: 'AWS::Region'}
       VpcId: !Ref VPC
-      CidrBlock: '10.0.9.0/24'
+      CidrBlock: !FindInMap [SubnetConfig, CIDR, PrivateSubnetC]
       Tags:
         - Key: 'ProjectName'
           Value: !Ref ProjectName
@@ -87,18 +111,24 @@ Resources:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
-          - Key: 'ProjectName'
-            Value: !Ref ProjectName
+        - Key: 'ProjectName'
+          Value: !Ref ProjectName
   GatewayAttachement:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
+  #########################################
+  # PublicRouteTable
+  #########################################
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: 'ProjectName'
+          Value: !Ref ProjectName
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: GatewayAttachement
@@ -117,59 +147,64 @@ Resources:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
 
-  # Setup networking resources for the private subnets. Containers
-  # in these subnets have only private IP addresses, and must use a NAT
-  # gateway to talk to the internet. We launch two NAT gateways, one for
-  # each private subnet.
-  NatGatewayOneAttachment:
+  #########################################
+  # NATGateway
+  # PrivateSubnetへのアクセスはALBのみに制限するのが、よりセキュア
+  # 特に用がないなら削除推奨
+  #########################################
+  NatGatewayAAttachment:
     Type: AWS::EC2::EIP
     DependsOn: GatewayAttachement
     Properties:
       Domain: vpc
-  NatGatewayTwoAttachment:
+  NatGatewayCAttachment:
     Type: AWS::EC2::EIP
     DependsOn: GatewayAttachement
     Properties:
       Domain: vpc
-  NatGatewayOne:
+  NatGatewayA:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt NatGatewayOneAttachment.AllocationId
+      AllocationId: !GetAtt NatGatewayAAttachment.AllocationId
       SubnetId: !Ref PublicSubnetA
-  NatGatewayTwo:
+  NatGatewayC:
     Type: AWS::EC2::NatGateway
     Properties:
-      AllocationId: !GetAtt NatGatewayTwoAttachment.AllocationId
+      AllocationId: !GetAtt NatGatewayCAttachment.AllocationId
       SubnetId: !Ref PublicSubnetC
-  PrivateRouteTableOne:
+
+  #########################################
+  # PrivateRouteTable
+  #########################################
+  PrivateRouteTableA:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
-  PrivateRouteOne:
+  PrivateRouteA:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref PrivateRouteTableOne
+      RouteTableId: !Ref PrivateRouteTableA
       DestinationCidrBlock: '0.0.0.0/0'
-      NatGatewayId: !Ref NatGatewayOne
-  PrivateRouteTableOneAssociation:
+      NatGatewayId: !Ref NatGatewayA
+  PrivateRouteTableAAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PrivateRouteTableOne
+      RouteTableId: !Ref PrivateRouteTableA
       SubnetId: !Ref PrivateSubnetA
-  PrivateRouteTableTwo:
+  PrivateRouteTableC:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
-  PrivateRouteTwo:
+  PrivateRouteC:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref PrivateRouteTableTwo
+      RouteTableId: !Ref PrivateRouteTableC
       DestinationCidrBlock: '0.0.0.0/0'
-      NatGatewayId: !Ref NatGatewayTwo
-  PrivateRouteTableTwoAssociation:
+      NatGatewayId: !Ref NatGatewayC
+  PrivateRouteTableCAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PrivateRouteTableTwo
+      RouteTableId: !Ref PrivateRouteTableC
       SubnetId: !Ref PrivateSubnetC
 
   # OPTIONAL: VPC Endpoint for DynamoDB
@@ -188,8 +223,8 @@ Resources:
             Principal: "*"
             Resource: "*"
       RouteTableIds:
-        - !Ref 'PrivateRouteTableOne'
-        - !Ref 'PrivateRouteTableTwo'
+        - !Ref PrivateRouteTableA
+        - !Ref PrivateRouteTableC
       ServiceName: !Join [ "", [ "com.amazonaws.", { "Ref": "AWS::Region" }, ".dynamodb" ] ]
       VpcId: !Ref 'VPC'
 

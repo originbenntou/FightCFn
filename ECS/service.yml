@@ -11,11 +11,11 @@ Parameters:
     Type: String
     Default: fight-service
     Description: A name for the service
-#  ImageUrl:
-#    Type: String
-#    Default: nginx
-#    Description: The url of a docker image that contains the application process that
-#      will handle the traffic for this service
+  ImageUrl:
+    Type: String
+    Default: '743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight'
+    Description: The url of a docker image that contains the application process that
+      will handle the traffic for this service
   ContainerPort:
     Type: Number
     Default: 8080
@@ -78,7 +78,7 @@ Resources:
         - Name: !Ref 'ServiceName'
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
-          Image: "743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight"
+          Image: !Ref 'ImageUrl'
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
 
