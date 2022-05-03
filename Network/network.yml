@@ -149,7 +149,7 @@ Resources:
 
   #########################################
   # NATGateway
-  # PrivateSubnetへのアクセスはALBのみに制限するのが、よりセキュア
+  # PrivateSubnetへの通信はALBのみに制限するのが、よりセキュア
   # 特に用がないなら削除推奨
   #########################################
   NatGatewayAAttachment:
@@ -207,85 +207,88 @@ Resources:
       RouteTableId: !Ref PrivateRouteTableC
       SubnetId: !Ref PrivateSubnetC
 
-  # OPTIONAL: VPC Endpoint for DynamoDB
-  # If a container needs to access DynamoDB this allows a container in the private subnet
-  # to talk to DynamoDB directly without needing to go via the NAT gateway. This reduces
-  # the amount of bandwidth through the gateway, meaning that the gateway is free to serve
-  # your other traffic.
-  DynamoDBEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action: "*"
-            Principal: "*"
-            Resource: "*"
-      RouteTableIds:
-        - !Ref PrivateRouteTableA
-        - !Ref PrivateRouteTableC
-      ServiceName: !Join [ "", [ "com.amazonaws.", { "Ref": "AWS::Region" }, ".dynamodb" ] ]
-      VpcId: !Ref 'VPC'
+  #########################################
+  # VPCEndpoint sample
+  #########################################
+#  DynamoDBEndpoint:
+#    Type: AWS::EC2::VPCEndpoint
+#    Properties:
+#      PolicyDocument:
+#        Version: "2012-10-17"
+#        Statement:
+#          - Effect: Allow
+#            Action: "*"
+#            Principal: "*"
+#            Resource: "*"
+#      RouteTableIds:
+#        - !Ref PrivateRouteTableA
+#        - !Ref PrivateRouteTableC
+#      ServiceName: !Join [ "", [ "com.amazonaws.", { "Ref": "AWS::Region" }, ".dynamodb" ] ]
+#      VpcId: !Ref 'VPC'
 
-  # ECS Resources
-  ECSCluster:
-    Type: AWS::ECS::Cluster
-
-  # A security group for the containers we will run in Fargate.
-  # Three rules, allowing network traffic from a public facing load
-  # balancer, a private internal load balancer, and from other members
-  # of the security group.
-  #
-  # Remove any of the following ingress rules that are not needed.
+  #########################################
+  # SecurityGroup For FargateContainer
+  #########################################
   FargateContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the Fargate containers
-      VpcId: !Ref 'VPC'
+      VpcId: !Ref VPC
+
+  #########################################
+  # SecurityGroup Inbound Rule
+  #########################################
   EcsSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from the public ALB
-      GroupId: !Ref 'FargateContainerSecurityGroup'
+      GroupId: !Ref FargateContainerSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
+      SourceSecurityGroupId: !Ref PublicLoadBalancerSG
   EcsSecurityGroupIngressFromPrivateALB:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from the private ALB
-      GroupId: !Ref 'FargateContainerSecurityGroup'
+      GroupId: !Ref FargateContainerSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref 'PrivateLoadBalancerSG'
+      SourceSecurityGroupId: !Ref PrivateLoadBalancerSG
   EcsSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from other containers in the same security group
-      GroupId: !Ref 'FargateContainerSecurityGroup'
+      GroupId: !Ref FargateContainerSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref 'FargateContainerSecurityGroup'
+      SourceSecurityGroupId: !Ref FargateContainerSecurityGroup
+  PrivateLoadBalancerIngressFromECS:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Only accept traffic from a container in the fargate container security group
+      GroupId: !Ref PrivateLoadBalancerSG
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref FargateContainerSecurityGroup
 
-  # Load balancers for getting traffic to containers.
-  # This sample template creates two load balancers:
-  #
-  # - One public load balancer, hosted in public subnets that is accessible
-  #   to the public, and is intended to route traffic to one or more public
-  #   facing services.
-  # - One private load balancer, hosted in private subnets, that only
-  #   accepts traffic from other containers in the Fargate cluster, and is
-  #   intended for private services that should not be accessed directly
-  #   by the public.
-
-  # A public facing load balancer, this is used for accepting traffic from the public
-  # internet and directing it to public facing microservices
+  #########################################
+  # Public LoadBalancer
+  #########################################
   PublicLoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
-      VpcId: !Ref 'VPC'
+      VpcId: !Ref VPC
       SecurityGroupIngress:
-        # Allow access to ALB from anywhere on the internet
         - CidrIp: 0.0.0.0/0
+          Description: from Ipv4
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIpv6: ::/0
+          Description: from Ipv6
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
           IpProtocol: -1
   PublicLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -294,20 +297,28 @@ Resources:
       Scheme: internet-facing
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
-          Value: '30'
+          Value: 30
+        - Key: deletion_protection.enabled
+          Value: true
+        - Key: access_logs.s3.enabled
+          Value: true
+#        - Key: access_logs.s3.bucket
+#          Value: !Sub ${ProjectName}-public-load-balancer-log # TODO: バケット作成
       Subnets:
-        # The load balancer is placed into the public subnets, so that traffic
-        # from the internet can reach the load balancer directly via the internet gateway
         - !Ref PublicSubnetA
         - !Ref PublicSubnetC
-      SecurityGroups: [!Ref 'PublicLoadBalancerSG']
-  # A dummy target group is used to setup the ALB to just drop traffic
-  # initially, before any real service target groups have been added.
+      SecurityGroups:
+        - !Ref PublicLoadBalancerSG
+
+  #########################################
+  # Target Group
+  # Attach to Public LoadBalancer
+  #########################################
   DummyTargetGroupPublic:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
+      HealthCheckPath: '/'
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
@@ -315,54 +326,54 @@ Resources:
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref 'VPC'
+      VpcId: !Ref VPC
   PublicLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
       - PublicLoadBalancer
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref 'DummyTargetGroupPublic'
-          Type: 'forward'
-      LoadBalancerArn: !Ref 'PublicLoadBalancer'
+        - TargetGroupArn: !Ref DummyTargetGroupPublic
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
 
-  # An internal load balancer, this would be used for a service that is not
-  # directly accessible to the public, but instead should only receive traffic
-  # from your other services.
+  #########################################
+  # Private LoadBalancer
+  #########################################
   PrivateLoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the internal load balancer
-      VpcId: !Ref 'VPC'
-  PrivateLoadBalancerIngressFromECS:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Only accept traffic from a container in the fargate container security group
-      GroupId: !Ref 'PrivateLoadBalancerSG'
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref 'FargateContainerSecurityGroup'
+      VpcId: !Ref VPC
   PrivateLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internal
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
-          Value: '30'
+          Value: 30
+        - Key: deletion_protection.enabled
+          Value: true
+        - Key: access_logs.s3.enabled
+          Value: true
+#        - Key: access_logs.s3.bucket
+#          Value: !Sub ${ProjectName}-private-load-balancer-log # TODO: バケット作成
       Subnets:
-        # This load balancer is put into the private subnet, so that there is no
-        # route for the public to even be able to access the private load balancer.
         - !Ref PrivateSubnetA
         - !Ref PrivateSubnetC
-      SecurityGroups: [!Ref 'PrivateLoadBalancerSG']
-  # This dummy target group is used to setup the ALB to just drop traffic
-  # initially, before any real service target groups have been added.
+      SecurityGroups: [!Ref PrivateLoadBalancerSG]
+
+  #########################################
+  # Target Group
+  # Attach to Private LoadBalancer
+  #########################################
   DummyTargetGroupPrivate:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
+      HealthCheckPath: '/'
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
@@ -370,152 +381,72 @@ Resources:
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref 'VPC'
+      VpcId: !Ref VPC
   PrivateLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
       - PrivateLoadBalancer
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref 'DummyTargetGroupPrivate'
-          Type: 'forward'
-      LoadBalancerArn: !Ref 'PrivateLoadBalancer'
+        - TargetGroupArn: !Ref DummyTargetGroupPrivate
+          Type: forward
+      LoadBalancerArn: !Ref PrivateLoadBalancer
       Port: 80
       Protocol: HTTP
 
-  # This is an IAM role which authorizes ECS to manage resources on your
-  # account on your behalf, such as updating your load balancer with the
-  # details of where your containers are, so that traffic can reach your
-  # containers.
-  ECSRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: [ecs.amazonaws.com]
-            Action: ['sts:AssumeRole']
-      Path: /
-      Policies:
-        - PolicyName: ecs-service
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  # Rules which allow ECS to attach network interfaces to instances
-                  # on your behalf in order for awsvpc networking mode to work right
-                  - 'ec2:AttachNetworkInterface'
-                  - 'ec2:CreateNetworkInterface'
-                  - 'ec2:CreateNetworkInterfacePermission'
-                  - 'ec2:DeleteNetworkInterface'
-                  - 'ec2:DeleteNetworkInterfacePermission'
-                  - 'ec2:Describe*'
-                  - 'ec2:DetachNetworkInterface'
-
-                  # Rules which allow ECS to update load balancers on your behalf
-                  # with the information sabout how to send traffic to your containers
-                  - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
-                  - 'elasticloadbalancing:DeregisterTargets'
-                  - 'elasticloadbalancing:Describe*'
-                  - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
-                  - 'elasticloadbalancing:RegisterTargets'
-                Resource: '*'
-
-  # This is a role which is used by the ECS tasks themselves.
-  ECSTaskExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: [ecs-tasks.amazonaws.com]
-            Action: ['sts:AssumeRole']
-      Path: /
-      Policies:
-        - PolicyName: AmazonECSTaskExecutionRolePolicy
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  # Allow the ECS Tasks to download images from ECR
-                  - 'ecr:GetAuthorizationToken'
-                  - 'ecr:BatchCheckLayerAvailability'
-                  - 'ecr:GetDownloadUrlForLayer'
-                  - 'ecr:BatchGetImage'
-
-                  # Allow the ECS tasks to upload logs to CloudWatch
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource: '*'
-
-# These are the values output by the CloudFormation template. Be careful
-# about changing any of them, because of them are exported with specific
-# names so that the other task related CF templates can use them.
 Outputs:
   ClusterName:
     Description: The name of the ECS cluster
-    Value: !Ref 'ECSCluster'
+    Value: !Ref ECSCluster
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'ClusterName' ] ]
   InternalUrl:
     Description: The url of the internal load balancer
-    Value: !Join ['', ['http://', !GetAtt 'PrivateLoadBalancer.DNSName']]
+    Value: !Join ['', ['http://', !GetAtt PrivateLoadBalancer.DNSName]]
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'InternalUrl' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'InternalUrl' ] ]
   ExternalUrl:
     Description: The url of the external load balancer
-    Value: !Join ['', ['http://', !GetAtt 'PublicLoadBalancer.DNSName']]
+    Value: !Join ['', ['http://', !GetAtt PublicLoadBalancer.DNSName]]
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ExternalUrl' ] ]
-  ECSRole:
-    Description: The ARN of the ECS role
-    Value: !GetAtt 'ECSRole.Arn'
-    Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSRole' ] ]
-  ECSTaskExecutionRole:
-    Description: The ARN of the ECS role
-    Value: !GetAtt 'ECSTaskExecutionRole.Arn'
-    Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRole' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'ExternalUrl' ] ]
   PublicListener:
     Description: The ARN of the public load balancer's Listener
     Value: !Ref PublicLoadBalancerListener
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicListener' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'PublicListener' ] ]
   PrivateListener:
     Description: The ARN of the private load balancer's Listener
     Value: !Ref PrivateLoadBalancerListener
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateListener' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'PrivateListener' ] ]
   VPCId:
     Description: The ID of the VPC that this stack is deployed in
-    Value: !Ref 'VPC'
+    Value: !Ref VPC
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'VPCId' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'VPCId' ] ]
   PublicSubnetA:
     Description: Public subnet one
-    Value: !Ref 'PublicSubnetA'
+    Value: !Ref PublicSubnetA
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicSubnetA' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'PublicSubnetA' ] ]
   PublicSubnetC:
     Description: Public subnet two
-    Value: !Ref 'PublicSubnetC'
+    Value: !Ref PublicSubnetC
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicSubnetC' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'PublicSubnetC' ] ]
   PrivateSubnetA:
     Description: Private subnet one
-    Value: !Ref 'PrivateSubnetA'
+    Value: !Ref PrivateSubnetA
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetA' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'PrivateSubnetA' ] ]
   PrivateSubnetC:
     Description: Private subnet two
-    Value: !Ref 'PrivateSubnetC'
+    Value: !Ref PrivateSubnetC
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetC' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'PrivateSubnetC' ] ]
   FargateContainerSecurityGroup:
     Description: A security group used to allow Fargate containers to receive traffic
-    Value: !Ref 'FargateContainerSecurityGroup'
+    Value: !Ref FargateContainerSecurityGroup
     Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'FargateContainerSecurityGroup' ] ]
+      Name: !Join [ ':', [ !Ref AWS::StackName, 'FargateContainerSecurityGroup' ] ]
