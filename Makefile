@@ -1,64 +1,57 @@
-AWS_PROFILE:=${AWS_PROFILE}
-AWS_REGION:=ap-northeast-1
+aws_profile:=${AWS_PROFILE}
+aws_region?=ap-northeast-1
 
-project_name:=fight
-env:=test
+# TODO: 要変更
+product_name?=myproduct
+env?=dev
+pwd=$(shell pwd)
 
-deploy:
+cfn_template_bucket?=cfn-template-$(product_name)-$(env)
 
+.PHONY: package-% deploy-% create_cfn_template_bucket
+
+package-%:
+	$(call _cfn_validate,$*)
+	@echo "\n"
+	$(call _cfn_package,$*)
+
+deploy-%:
+	$(call _cfn_deploy,$*)
+
+define _cfn_validate
+	aws cloudformation validate-template \
+		--template-body file://$(pwd)/stacks/$1/master.yml \
+		--output text \
+		--profile $(aws_profile) \
+		--region $(aws_region)
+endef
+
+define _cfn_package
+	aws cloudformation package \
+		--template-file ./stacks/$1/master.yml \
+		--s3-bucket $(cfn_template_bucket) \
+		--s3-prefix $1\
+		--output-template-file ./stacks/$1/package.yml \
+		--profile $(aws_profile) \
+		--region $(aws_region)
+endef
 
 define _cfn_deploy
 	aws cloudformation deploy \
-		--stack-name $1 \
-		--template-file $2 \
+		--template-file ./stacks/$1/package.yml \
+		--parameter-overrides ProductName=$(product_name) Env=$(env) \
+		--stack-name $(product_name)-$1-$(env) \
 		--capabilities CAPABILITY_NAMED_IAM \
 		--no-fail-on-empty-changeset \
-		--profile ${AWS_PROFILE} \
-		--region ${AWS_REGION}
+		--profile $(aws_profile) \
+		--region $(aws_region)
 endef
 
-deploy-s3-%:
+create_cfn_template_bucket:
 	aws cloudformation deploy \
-		--stack-name s3-$* \
-		--template-file ./S3/$*.yml \
-		--capabilities CAPABILITY_NAMED_IAM \
+		--template-file ./template_bucket.yml \
+		--parameter-overrides ProductName=$(product_name) Env=$(env) BucketName=$(cfn_template_bucket) \
+		--stack-name $(product_name)-cfn-template-bucket-$(env) \
 		--no-fail-on-empty-changeset \
-		--profile ${aws_profile} \
-		--region ${aws_region}
-
-deploy-codecommit:
-	aws cloudformation deploy \
-		--stack-name codecommit \
-		--template-file ./CodeCommit/codecommit.yml \
-		--capabilities CAPABILITY_NAMED_IAM \
-		--no-fail-on-empty-changeset \
-		--profile ${aws_profile} \
-		--region ${aws_region}
-
-deploy-network:
-	aws cloudformation deploy \
-		--stack-name ecs-$* \
-		--template-file ./ECS/$*.yml \
-		--capabilities CAPABILITY_NAMED_IAM \
-		--no-fail-on-empty-changeset \
-		--profile ${aws_profile} \
-		--region ${aws_region}
-
-deploy-ecs-%:
-	aws cloudformation deploy \
-		--stack-name ecs-$* \
-		--template-file ./ECS/$*.yml \
-		--capabilities CAPABILITY_NAMED_IAM \
-		--no-fail-on-empty-changeset \
-		--profile ${aws_profile} \
-		--region ${aws_region}
-
-deploy-codepipeline:
-	aws cloudformation deploy \
-		--stack-name codepipeline \
-		--template-file ./CodePipeline/codepipeline.yml \
-		--capabilities CAPABILITY_NAMED_IAM \
-		--no-fail-on-empty-changeset \
-		--profile ${aws_profile} \
-		--region ${aws_region}
-
+		--profile $(aws_profile) \
+		--region $(aws_region)

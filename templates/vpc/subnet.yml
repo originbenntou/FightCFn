@@ -10,15 +10,22 @@ Parameters:
       - stg
       - prd
 
+  VPC:
+    Type: String
   CidrBlock:
+    Type: String
+  AZ:
     Type: String
 
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
+  Subnet:
+    Type: AWS::EC2::Subnet
     Properties:
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
+      AvailabilityZone:
+        Fn::Select:
+          - !Ref AZ
+          - Fn::GetAZs: {Ref: 'AWS::Region'}
+      VpcId: !Ref VPC
       CidrBlock: !Ref CidrBlock
       Tags:
         - Key: 'ProductName'
@@ -27,5 +34,5 @@ Resources:
           Value: !Ref Env
 
 Outputs:
-  VpcId:
-    Value: !Ref VPC
+  Subnet:
+    Value: !Ref Subnet

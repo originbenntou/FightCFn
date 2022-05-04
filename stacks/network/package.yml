@@ -1,0 +1,307 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "VPC,Subnet,LoadBalancer,SecurityGroup\n"
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+    - dev
+    - stg
+    - prd
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/1a0f88129f6f7215dd98d9293868d314.template
+      Parameters:
+        CidrBlock: 10.0.0.0/16
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicSubnetA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.0.0/24
+        AZ: 0
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicSubnetC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.1.0/24
+        AZ: 2
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.8.0/24
+        AZ: 0
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.9.0/24
+        AZ: 2
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetAForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.16.0/24
+        AZ: 0
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetCForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.17.0/24
+        AZ: 2
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicSubnetAForBastion:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.240.0/24
+        AZ: 0
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicSubnetCForBastion:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d55b8694a651f9e7ef74de2aa25b8f04.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.241.0/24
+        AZ: 2
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: ProductName
+        Value:
+          Ref: ProductName
+      - Key: Env
+        Value:
+          Ref: Env
+  GatewayAttachement:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Fn::GetAtt:
+        - VPC
+        - Outputs.VpcId
+      InternetGatewayId:
+        Ref: InternetGateway
+  NatGatewayA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/189399d46061c4d6268bbfbf6b1a60fe.template
+      Parameters:
+        SubnetId:
+          Fn::GetAtt:
+          - PublicSubnetA
+          - Outputs.Subnet
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  NatGatewayC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/189399d46061c4d6268bbfbf6b1a60fe.template
+      Parameters:
+        SubnetId:
+          Fn::GetAtt:
+          - PublicSubnetC
+          - Outputs.Subnet
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicRouteTable:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/4ec11beeaa3198e4de6d61138012afbf.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        GatewayId:
+          Ref: InternetGateway
+        NatGatewayId: ''
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/ff3df38d2a58071823a48e6ec930c455.template
+      Parameters:
+        SubnetId:
+          Fn::GetAtt:
+          - PublicSubnetA
+          - Outputs.Subnet
+        RouteTableId:
+          Fn::GetAtt:
+          - PublicRouteTable
+          - Outputs.RouteTable
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicSubnetCRouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/ff3df38d2a58071823a48e6ec930c455.template
+      Parameters:
+        SubnetId:
+          Fn::GetAtt:
+          - PublicSubnetC
+          - Outputs.Subnet
+        RouteTableId:
+          Fn::GetAtt:
+          - PublicRouteTable
+          - Outputs.RouteTable
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateRouteTableA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/4ec11beeaa3198e4de6d61138012afbf.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        GatewayId: ''
+        NatGatewayId:
+          Fn::GetAtt:
+          - NatGatewayA
+          - Outputs.NatGateway
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/ff3df38d2a58071823a48e6ec930c455.template
+      Parameters:
+        SubnetId:
+          Fn::GetAtt:
+          - PrivateSubnetA
+          - Outputs.Subnet
+        RouteTableId:
+          Fn::GetAtt:
+          - PrivateRouteTableA
+          - Outputs.RouteTable
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateRouteTableC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/4ec11beeaa3198e4de6d61138012afbf.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        GatewayId: ''
+        NatGatewayId:
+          Fn::GetAtt:
+          - NatGatewayC
+          - Outputs.NatGateway
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/ff3df38d2a58071823a48e6ec930c455.template
+      Parameters:
+        SubnetId:
+          Fn::GetAtt:
+          - PrivateSubnetC
+          - Outputs.Subnet
+        RouteTableId:
+          Fn::GetAtt:
+          - PrivateRouteTableC
+          - Outputs.RouteTable
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env

@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  VPC:
+    Type: String
+  GatewayId:
+    Type: String
+  NatGatewayId:
+    Type: String
+
+Conditions:
+  isEmptyGatewayId: !Equals [ !Ref GatewayId, '' ]
+  isEmptyNatGatewayId: !Equals [ !Ref NatGatewayId, '' ]
+
+Resources:
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+  Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !If [ isEmptyGatewayId, !Ref AWS::NoValue, !Ref GatewayId ]
+      NatGatewayId: !If [ isEmptyNatGatewayId, !Ref AWS::NoValue, !Ref NatGatewayId ]
+
+Outputs:
+  RouteTable:
+    Value: !Ref RouteTable

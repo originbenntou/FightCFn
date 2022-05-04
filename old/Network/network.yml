@@ -149,6 +149,7 @@ Resources:
 
   #########################################
   # NATGateway
+  # EIPでPrivateSubnet内のリソースにアクセスする用
   # PrivateSubnetへの通信はALBのみに制限するのが、よりセキュア
   # 特に用がないなら削除推奨
   #########################################
@@ -395,11 +396,6 @@ Resources:
       Protocol: HTTP
 
 Outputs:
-  ClusterName:
-    Description: The name of the ECS cluster
-    Value: !Ref ECSCluster
-    Export:
-      Name: !Join [ ':', [ !Ref AWS::StackName, 'ClusterName' ] ]
   InternalUrl:
     Description: The url of the internal load balancer
     Value: !Join ['', ['http://', !GetAtt PrivateLoadBalancer.DNSName]]

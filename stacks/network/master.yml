@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  VPC,Subnet,LoadBalancer,SecurityGroup
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+Resources:
+  #########################################
+  # VPC
+  #########################################
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/vpc.yml'
+      Parameters:
+        CidrBlock: '10.0.0.0/16'
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+
+  #########################################
+  # Subnet
+  #########################################
+  PublicSubnetA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.0.0/24'
+        AZ: 0
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PublicSubnetC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.1.0/24'
+        AZ: 2
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.8.0/24'
+        AZ: 0
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.9.0/24'
+        AZ: 2
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetAForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.16.0/24'
+        AZ: 0
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetCForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.17.0/24'
+        AZ: 2
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PublicSubnetAForBastion:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.240.0/24'
+        AZ: 0
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PublicSubnetCForBastion:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.241.0/24'
+        AZ: 2
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+
+  #########################################
+  # InternetGateway
+  # ✗ nested stack
+  #########################################
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+  GatewayAttachement:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !GetAtt VPC.Outputs.VpcId
+      InternetGatewayId: !Ref InternetGateway
+
+  #########################################
+  # NATGateway
+  # EIPでPrivateSubnet内のリソースにアクセスする用
+  # PrivateSubnetへの通信はALBのみに制限するのが、よりセキュア 特に用がないなら削除推奨
+  #########################################
+  NatGatewayA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/nat_gateway.yml'
+      Parameters:
+        SubnetId: !GetAtt PublicSubnetA.Outputs.Subnet
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  NatGatewayC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/nat_gateway.yml'
+      Parameters:
+        SubnetId: !GetAtt PublicSubnetC.Outputs.Subnet
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+
+  #########################################
+  # PublicRouteTable
+  #########################################
+  PublicRouteTable:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        GatewayId: !Ref InternetGateway
+        NatGatewayId: ''
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !GetAtt PublicSubnetA.Outputs.Subnet
+        RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PublicSubnetCRouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !GetAtt PublicSubnetC.Outputs.Subnet
+        RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+
+  #########################################
+  # PrivateRouteTable
+  #########################################
+  PrivateRouteTableA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        GatewayId: ''
+        NatGatewayId: !GetAtt NatGatewayA.Outputs.NatGateway
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !GetAtt PrivateSubnetA.Outputs.Subnet
+        RouteTableId: !GetAtt PrivateRouteTableA.Outputs.RouteTable
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateRouteTableC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        GatewayId: ''
+        NatGatewayId: !GetAtt NatGatewayC.Outputs.NatGateway
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !GetAtt PrivateSubnetC.Outputs.Subnet
+        RouteTableId: !GetAtt PrivateRouteTableC.Outputs.RouteTable
+        ProductName: !Ref ProductName
+        Env: !Ref Env
