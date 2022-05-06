@@ -140,6 +140,36 @@ Resources:
           Ref: ProductName
         Env:
           Ref: Env
+  PrivateSubnetAForVPCEndpoint:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/709be9f6ec1e7e5bf443e39fa2df6f3e.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.248.0/24
+        AZ: 0
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateSubnetCForVPCEndpoint:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/709be9f6ec1e7e5bf443e39fa2df6f3e.template
+      Parameters:
+        VPC:
+          Fn::GetAtt:
+          - VPC
+          - Outputs.VpcId
+        CidrBlock: 10.0.249.0/24
+        AZ: 1
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -341,3 +371,45 @@ Outputs:
       - Outputs.SubnetId
     Export:
       Name: PrivateSubnetC
+  PrivateSubnetAForDB:
+    Value:
+      Fn::GetAtt:
+      - PrivateSubnetAForDB
+      - Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetAForDB
+  PrivateSubnetCForDB:
+    Value:
+      Fn::GetAtt:
+      - PrivateSubnetCForDB
+      - Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetCForDB
+  PublicSubnetAForBastion:
+    Value:
+      Fn::GetAtt:
+      - PublicSubnetAForBastion
+      - Outputs.SubnetId
+    Export:
+      Name: PublicSubnetAForBastion
+  PublicSubnetCForBastion:
+    Value:
+      Fn::GetAtt:
+      - PublicSubnetCForBastion
+      - Outputs.SubnetId
+    Export:
+      Name: PublicSubnetCForBastion
+  PrivateSubnetAForVPCEndpoint:
+    Value:
+      Fn::GetAtt:
+      - PrivateSubnetAForVPCEndpoint
+      - Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetAForVPCEndpoint
+  PrivateSubnetCForVPCEndpoint:
+    Value:
+      Fn::GetAtt:
+      - PrivateSubnetCForVPCEndpoint
+      - Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetCForVPCEndpoint

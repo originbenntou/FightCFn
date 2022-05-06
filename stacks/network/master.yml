@@ -108,6 +108,27 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
+  PrivateSubnetAForVPCEndpoint:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.248.0/24'
+        AZ: 0
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetCForVPCEndpoint:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/subnet.yml'
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VpcId
+        CidrBlock: '10.0.249.0/24'
+        AZ: 1
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+
 
   #########################################
   # InternetGateway
@@ -244,3 +265,27 @@ Outputs:
     Value: !GetAtt PrivateSubnetC.Outputs.SubnetId
     Export:
       Name: PrivateSubnetC
+  PrivateSubnetAForDB:
+    Value: !GetAtt PrivateSubnetAForDB.Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetAForDB
+  PrivateSubnetCForDB:
+    Value: !GetAtt PrivateSubnetCForDB.Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetCForDB
+  PublicSubnetAForBastion:
+    Value: !GetAtt PublicSubnetAForBastion.Outputs.SubnetId
+    Export:
+      Name: PublicSubnetAForBastion
+  PublicSubnetCForBastion:
+    Value: !GetAtt PublicSubnetCForBastion.Outputs.SubnetId
+    Export:
+      Name: PublicSubnetCForBastion
+  PrivateSubnetAForVPCEndpoint:
+    Value: !GetAtt PrivateSubnetAForVPCEndpoint.Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetAForVPCEndpoint
+  PrivateSubnetCForVPCEndpoint:
+    Value: !GetAtt PrivateSubnetCForVPCEndpoint.Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetCForVPCEndpoint
