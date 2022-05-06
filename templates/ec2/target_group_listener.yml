@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  TargetGroupArn:
+    Type: String
+  LoadBalancerArn:
+    Type: String
+
+Resources:
+  TargetGroupListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroupArn
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancerArn
+      Port: 80
+      Protocol: HTTP
+
+Outputs:
+  TargetGroupListener:
+    Value: !Ref TargetGroupListener

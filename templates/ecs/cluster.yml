@@ -10,24 +10,12 @@ Parameters:
       - stg
       - prd
 
-  VPC:
-    Type: String
-  CidrBlock:
-    Type: String
-  AZ:
-    Type: String
-
 Resources:
-  Subnet:
-    Type: AWS::EC2::Subnet
+  ECSCluster:
+    Type: AWS::ECS::Cluster
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - !Ref AZ
-          - Fn::GetAZs: {Ref: 'AWS::Region'}
-      VpcId: !Ref VPC
-      CidrBlock: !Ref CidrBlock
+      ClusterName: !Sub ${ProductName}-cluster-${Env}
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName
@@ -35,5 +23,5 @@ Resources:
           Value: !Ref Env
 
 Outputs:
-  SubnetId:
-    Value: !Ref Subnet
+  ECSClusterArn:
+    Value: !GetAtt ECSCluster.Arn

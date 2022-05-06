@@ -1,0 +1,407 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "ECSCluster,Service,Task,LoadBalancer,SecurityGroup\n"
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+    - dev
+    - stg
+    - prd
+  ImageUrl:
+    Type: String
+    Default: 743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight
+  ContainerPort:
+    Type: Number
+    Default: 8080
+  ContainerCpu:
+    Type: Number
+    Default: 256
+  ContainerMemory:
+    Type: Number
+    Default: 512
+  Path:
+    Type: String
+    Default: '*'
+  Priority:
+    Type: Number
+    Default: 1
+  DesiredCount:
+    Type: Number
+    Default: 2
+Resources:
+  PublicLoadBalancerSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ce4f70740ae88a6319ff85971b0e51c2.template
+      Parameters:
+        VPC:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PublicALBSecurityGroupIngressFromIGWIPv4:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/026036423ca073e00e362c7723d37cfd.template
+      Parameters:
+        GroupId:
+          Fn::GetAtt:
+          - PublicLoadBalancerSecurityGroup
+          - Outputs.SecurityGroupId
+        CidrIp: 0.0.0.0/0
+        CidrIpv6: ''
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 8080
+  PublicALBSecurityGroupIngressFromIGWIPv6:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/026036423ca073e00e362c7723d37cfd.template
+      Parameters:
+        GroupId:
+          Fn::GetAtt:
+          - PublicLoadBalancerSecurityGroup
+          - Outputs.SecurityGroupId
+        CidrIp: ''
+        CidrIpv6: ::/0
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 8080
+  PrivateLoadBalancerSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ce4f70740ae88a6319ff85971b0e51c2.template
+      Parameters:
+        VPC:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateALBSecurityGroupIngressFromECS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
+      Parameters:
+        IpProtocol: '-1'
+        GroupId:
+          Fn::GetAtt:
+          - PrivateLoadBalancerSecurityGroup
+          - Outputs.SecurityGroupId
+        SourceSecurityGroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
+  ECSContainerSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ce4f70740ae88a6319ff85971b0e51c2.template
+      Parameters:
+        VPC:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  ECSSecurityGroupIngressFromPublicALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
+      Parameters:
+        IpProtocol: '-1'
+        GroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
+        SourceSecurityGroupId:
+          Fn::GetAtt:
+          - PublicLoadBalancerSecurityGroup
+          - Outputs.SecurityGroupId
+  ECSSecurityGroupIngressFromPrivateALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
+      Parameters:
+        IpProtocol: '-1'
+        GroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
+        SourceSecurityGroupId:
+          Fn::GetAtt:
+          - PrivateLoadBalancerSecurityGroup
+          - Outputs.SecurityGroupId
+  ECSSecurityGroupIngressFromSelf:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
+      Parameters:
+        IpProtocol: '-1'
+        GroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
+        SourceSecurityGroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
+  PublicLoadBalancer:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/27c971f4b6aab9a7568e88568a4b260b.template
+      Parameters:
+        Scheme: internet-facing
+        Subnets:
+          Fn::Join:
+          - ','
+          - - Fn::ImportValue: PublicSubnetA
+            - Fn::ImportValue: PublicSubnetC
+        SecurityGroups:
+          Fn::Join:
+          - ','
+          - - Fn::GetAtt:
+              - PublicLoadBalancerSecurityGroup
+              - Outputs.SecurityGroupId
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  DefaultTargetGroupForPublicALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/f208e16b382baba6b718c8d1c8a8a689.template
+      Parameters:
+        VpcId:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  DefaultTargetGroupListenerForPublicALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/89b5f3fa0cf298ba80cfa2ee71ff3697.template
+      Parameters:
+        TargetGroupArn:
+          Fn::GetAtt:
+          - DefaultTargetGroupForPublicALB
+          - Outputs.TargetGroupArn
+        LoadBalancerArn:
+          Fn::GetAtt:
+          - PublicLoadBalancer
+          - Outputs.LoadBalancerArn
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  PrivateLoadBalancer:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/27c971f4b6aab9a7568e88568a4b260b.template
+      Parameters:
+        Scheme: internal
+        Subnets:
+          Fn::Join:
+          - ','
+          - - Fn::ImportValue: PrivateSubnetA
+            - Fn::ImportValue: PrivateSubnetC
+        SecurityGroups:
+          Fn::Join:
+          - ','
+          - - Fn::GetAtt:
+              - PrivateLoadBalancerSecurityGroup
+              - Outputs.SecurityGroupId
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  DefaultTargetGroupForPrivateALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/f208e16b382baba6b718c8d1c8a8a689.template
+      Parameters:
+        VpcId:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  DefaultTargetGroupListenerForPrivateALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/89b5f3fa0cf298ba80cfa2ee71ff3697.template
+      Parameters:
+        TargetGroupArn:
+          Fn::GetAtt:
+          - DefaultTargetGroupForPrivateALB
+          - Outputs.TargetGroupArn
+        LoadBalancerArn:
+          Fn::GetAtt:
+          - PrivateLoadBalancer
+          - Outputs.LoadBalancerArn
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  TargetGroupForECS:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckPort: 8080
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name:
+        Fn::Sub: ${ProductName}-service-${Env}
+      Port:
+        Ref: ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId:
+        Fn::ImportValue: VPC
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - TargetGroupArn:
+          Ref: TargetGroupForECS
+        Type: forward
+      Conditions:
+      - Field: path-pattern
+        Values:
+        - Ref: Path
+      ListenerArn:
+        Fn::GetAtt:
+        - DefaultTargetGroupListenerForPublicALB
+        - Outputs.TargetGroupListener
+      Priority:
+        Ref: Priority
+  ECSCluster:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/d19774a5cc97d4c798576a73f5847af6.template
+      Parameters:
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  ECSTask:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/2be23cb9331d331539528ba542102221.template
+      Parameters:
+        ContainerCpu:
+          Ref: ContainerCpu
+        ContainerMemory:
+          Ref: ContainerMemory
+        ImageUrl:
+          Ref: ImageUrl
+        ContainerPort:
+          Ref: ContainerPort
+        ExecutionRoleArn:
+          Ref: ECSTaskExecutionRole
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  ECSService:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ef4c9f6ebf9c1c30b187ad655dc1dedc.template
+      Parameters:
+        ClusterArn:
+          Fn::GetAtt:
+          - ECSCluster
+          - Outputs.ECSClusterArn
+        DesiredCount:
+          Ref: DesiredCount
+        SecurityGroups:
+          Fn::Join:
+          - ','
+          - - Fn::GetAtt:
+              - ECSContainerSecurityGroup
+              - Outputs.SecurityGroupId
+        Subnets:
+          Fn::Join:
+          - ','
+          - - Fn::ImportValue: PrivateSubnetA
+            - Fn::ImportValue: PrivateSubnetC
+        TaskDefinitionArn:
+          Fn::GetAtt:
+          - ECSTask
+          - Outputs.TaskDefinitionArn
+        ContainerPort:
+          Ref: ContainerPort
+        TargetGroupArn:
+          Ref: TargetGroupForECS
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ecs.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:AttachNetworkInterface
+            - ec2:CreateNetworkInterface
+            - ec2:CreateNetworkInterfacePermission
+            - ec2:DeleteNetworkInterface
+            - ec2:DeleteNetworkInterfacePermission
+            - ec2:Describe*
+            - ec2:DetachNetworkInterface
+            - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+            - elasticloadbalancing:DeregisterTargets
+            - elasticloadbalancing:Describe*
+            - elasticloadbalancing:RegisterInstancesWithLoadBalancer
+            - elasticloadbalancing:RegisterTargets
+            Resource: '*'
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ecs-tasks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: AmazonECSTaskExecutionRolePolicy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - ecr:GetAuthorizationToken
+            - ecr:BatchCheckLayerAvailability
+            - ecr:GetDownloadUrlForLayer
+            - ecr:BatchGetImage
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+Outputs:
+  PublicLoadBalancerDnsName:
+    Value:
+      Fn::GetAtt:
+      - PublicLoadBalancer
+      - Outputs.LoadBalancerDnsName

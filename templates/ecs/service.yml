@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  ClusterArn:
+    Type: String
+  DesiredCount:
+    Type: Number
+  SecurityGroups:
+    Type: CommaDelimitedList
+  Subnets:
+    Type: CommaDelimitedList
+  TaskDefinitionArn:
+    Type: String
+  ContainerPort:
+    Type: Number
+  TargetGroupArn:
+    Type: String
+
+Resources:
+  Service:
+    Type: AWS::ECS::Service
+    DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
+    Properties:
+      ServiceName: !Sub ${ProductName}-service-${Env}
+      Cluster: !Ref ClusterArn
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups: !Ref SecurityGroups
+          Subnets: !Ref Subnets
+      TaskDefinition: !Ref TaskDefinitionArn
+      LoadBalancers:
+        - ContainerName: !Sub ${ProductName}-service-${Env}
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroupArn
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+
+Outputs:
+  Service:
+    Value: !Ref Service

@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  VpcId:
+    Type: String
+
+Resources:
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: '/'
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+#      Name: !Join ['-', [!Ref 'AWS::StackName', 'default']]
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+
+Outputs:
+  TargetGroupArn:
+    Value: !Ref TargetGroup

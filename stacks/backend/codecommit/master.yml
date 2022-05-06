@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  RepositoryName:
+    Type: String
+    Default: fight
+
+Resources:
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    DeletionPolicy: Retain
+    Properties:
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+      RepositoryName: !Ref RepositoryName
+      RepositoryDescription: ''
+#      Code:
+#        BranchName: main
+#        S3:
+#          Bucket: fight-codecommit-dev
+#          Key: fight.zip
+
+Outputs:
+  CodeCommitRepository:
+    Value: !Ref CodeCommitRepository
+    Export:
+      Name: CodeCommitRepository

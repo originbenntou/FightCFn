@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  IpProtocol:
+    Type: String
+  GroupId:
+    Type: String
+  SourceSecurityGroupId:
+    Type: String
+
+Resources:
+  SecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: !Ref AWS::StackName
+      IpProtocol: !Ref IpProtocol
+      GroupId: !Ref GroupId
+      SourceSecurityGroupId: !Ref SourceSecurityGroupId
+
+Outputs:
+  SecurityGroupIngress:
+    Value: !Ref SecurityGroupIngress

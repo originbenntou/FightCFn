@@ -16,10 +16,12 @@ Parameters:
 Resources:
   NatGatewayAttachment:
     Type: AWS::EC2::EIP
+    DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
       Domain: vpc
   NatGateway:
     Type: AWS::EC2::NatGateway
+    DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
       AllocationId: !GetAtt NatGatewayAttachment.AllocationId
       SubnetId: !Ref SubnetId

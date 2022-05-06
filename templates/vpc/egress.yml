@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  GroupId:
+    Type: String
+  CidrIp:
+    Type: String
+  IpProtocol:
+    Type: String
+
+Resources:
+  SecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: !Ref AWS::StackName
+      GroupId: !Ref GroupId
+      CidrIp: !Ref CidrIp
+      IpProtocol: tcp
+
+Outputs:
+  SecurityGroupEgress:
+    Value: !Ref SecurityGroupEgress

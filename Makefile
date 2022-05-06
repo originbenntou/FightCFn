@@ -20,7 +20,7 @@ deploy-%:
 
 define _cfn_validate
 	aws cloudformation validate-template \
-		--template-body file://$(pwd)/stacks/$1/master.yml \
+		--template-body file://$(pwd)/stacks/$(shell echo $1 |  sed -e 's/-/\//g')/master.yml \
 		--output text \
 		--profile $(aws_profile) \
 		--region $(aws_region)
@@ -28,17 +28,17 @@ endef
 
 define _cfn_package
 	aws cloudformation package \
-		--template-file ./stacks/$1/master.yml \
+		--template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/master.yml \
 		--s3-bucket $(cfn_template_bucket) \
 		--s3-prefix $1\
-		--output-template-file ./stacks/$1/package.yml \
+		--output-template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/package.yml \
 		--profile $(aws_profile) \
 		--region $(aws_region)
 endef
 
 define _cfn_deploy
 	aws cloudformation deploy \
-		--template-file ./stacks/$1/package.yml \
+		--template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/package.yml \
 		--parameter-overrides ProductName=$(product_name) Env=$(env) \
 		--stack-name $(product_name)-$1-$(env) \
 		--capabilities CAPABILITY_NAMED_IAM \

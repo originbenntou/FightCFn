@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  GroupId:
+    Type: String
+  CidrIp:
+    Type: String
+  CidrIpv6:
+    Type: String
+  IpProtocol:
+    Type: String
+  FromPort:
+    Type: String
+  ToPort:
+    Type: String
+
+Conditions:
+  isEmptyCidrIp: !Equals [ !Ref CidrIp, '' ]
+  isEmptyCidrIpv6: !Equals [ !Ref CidrIpv6, '' ]
+
+Resources:
+  SecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: !Ref AWS::StackName
+      GroupId: !Ref GroupId
+      CidrIp: !If [ isEmptyCidrIp, !Ref AWS::NoValue, !Ref CidrIp ]
+      CidrIpv6: !If [ isEmptyCidrIpv6, !Ref AWS::NoValue, !Ref CidrIpv6 ]
+      IpProtocol: tcp
+      FromPort: !Ref FromPort
+      ToPort: !Ref ToPort
+
+Outputs:
+  SecurityGroupIngress:
+    Value: !Ref SecurityGroupIngress

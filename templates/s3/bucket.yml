@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  BucketName:
+    Type: String
+  ExpirationInDays:
+    Type: Number
+
+
+Conditions:
+  isEmptExpirationInDays: !Equals [ !Ref ExpirationInDays, '' ]
+
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain # FIXME: DEV環境とそれ以外で分岐
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration: !If
+        - isEmptExpirationInDays
+        - !Ref AWS::NoValue
+        - Rules:
+          - ExpirationInDays: !Ref ExpirationInDays
+            Status: Enabled
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+
+Outputs:
+  Bucket:
+    Value: !Ref Bucket

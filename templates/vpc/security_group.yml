@@ -12,22 +12,14 @@ Parameters:
 
   VPC:
     Type: String
-  CidrBlock:
-    Type: String
-  AZ:
-    Type: String
 
 Resources:
-  Subnet:
-    Type: AWS::EC2::Subnet
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - !Ref AZ
-          - Fn::GetAZs: {Ref: 'AWS::Region'}
+      GroupDescription: !Ref AWS::StackName
       VpcId: !Ref VPC
-      CidrBlock: !Ref CidrBlock
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName
@@ -35,5 +27,5 @@ Resources:
           Value: !Ref Env
 
 Outputs:
-  SubnetId:
-    Value: !Ref Subnet
+  SecurityGroupId:
+    Value: !GetAtt SecurityGroup.GroupId

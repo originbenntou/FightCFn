@@ -16,6 +16,7 @@ Parameters:
 Resources:
   VPC:
     Type: AWS::EC2::VPC
+    DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
       EnableDnsSupport: true
       EnableDnsHostnames: true

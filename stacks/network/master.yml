@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  VPC,Subnet,LoadBalancer,SecurityGroup
+  VPC,Subnet,NATGateway,RouteTable
 
 Parameters:
   ProductName:
@@ -85,7 +85,7 @@ Resources:
       Parameters:
         VPC: !GetAtt VPC.Outputs.VpcId
         CidrBlock: '10.0.17.0/24'
-        AZ: 2
+        AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
   PublicSubnetAForBastion:
@@ -105,7 +105,7 @@ Resources:
       Parameters:
         VPC: !GetAtt VPC.Outputs.VpcId
         CidrBlock: '10.0.241.0/24'
-        AZ: 2
+        AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
 
@@ -137,7 +137,7 @@ Resources:
     Properties:
       TemplateURL: '../../templates/vpc/nat_gateway.yml'
       Parameters:
-        SubnetId: !GetAtt PublicSubnetA.Outputs.Subnet
+        SubnetId: !GetAtt PublicSubnetA.Outputs.SubnetId
         ProductName: !Ref ProductName
         Env: !Ref Env
   NatGatewayC:
@@ -145,7 +145,7 @@ Resources:
     Properties:
       TemplateURL: '../../templates/vpc/nat_gateway.yml'
       Parameters:
-        SubnetId: !GetAtt PublicSubnetC.Outputs.Subnet
+        SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
         ProductName: !Ref ProductName
         Env: !Ref Env
 
@@ -167,7 +167,7 @@ Resources:
     Properties:
       TemplateURL: '../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !GetAtt PublicSubnetA.Outputs.Subnet
+        SubnetId: !GetAtt PublicSubnetA.Outputs.SubnetId
         RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
         ProductName: !Ref ProductName
         Env: !Ref Env
@@ -176,7 +176,7 @@ Resources:
     Properties:
       TemplateURL: '../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !GetAtt PublicSubnetC.Outputs.Subnet
+        SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
         RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
         ProductName: !Ref ProductName
         Env: !Ref Env
@@ -199,7 +199,7 @@ Resources:
     Properties:
       TemplateURL: '../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !GetAtt PrivateSubnetA.Outputs.Subnet
+        SubnetId: !GetAtt PrivateSubnetA.Outputs.SubnetId
         RouteTableId: !GetAtt PrivateRouteTableA.Outputs.RouteTable
         ProductName: !Ref ProductName
         Env: !Ref Env
@@ -218,7 +218,29 @@ Resources:
     Properties:
       TemplateURL: '../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !GetAtt PrivateSubnetC.Outputs.Subnet
+        SubnetId: !GetAtt PrivateSubnetC.Outputs.SubnetId
         RouteTableId: !GetAtt PrivateRouteTableC.Outputs.RouteTable
         ProductName: !Ref ProductName
         Env: !Ref Env
+
+Outputs:
+  VPC:
+    Value: !GetAtt VPC.Outputs.VpcId
+    Export:
+      Name: VPC
+  PublicSubnetA:
+    Value: !GetAtt PublicSubnetA.Outputs.SubnetId
+    Export:
+      Name: PublicSubnetA
+  PublicSubnetC:
+    Value: !GetAtt PublicSubnetC.Outputs.SubnetId
+    Export:
+      Name: PublicSubnetC
+  PrivateSubnetA:
+    Value: !GetAtt PrivateSubnetA.Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetA
+  PrivateSubnetC:
+    Value: !GetAtt PrivateSubnetC.Outputs.SubnetId
+    Export:
+      Name: PrivateSubnetC
