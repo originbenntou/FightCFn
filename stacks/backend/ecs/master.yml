@@ -269,6 +269,10 @@ Resources:
   #########################################
   ECSService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - ECSCluster
+      - ECSTask
+      - LoadBalancerRule # ECS用TargetGroupのアタッチ待ち
     Properties:
       TemplateURL: '../../../templates/ecs/service.yml'
       Parameters:

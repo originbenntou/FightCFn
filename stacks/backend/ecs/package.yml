@@ -151,7 +151,7 @@ Resources:
   PublicLoadBalancer:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/27c971f4b6aab9a7568e88568a4b260b.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/13099a64bf43fb6d09abe35c23ae0ba3.template
       Parameters:
         Scheme: internet-facing
         Subnets:
@@ -200,7 +200,7 @@ Resources:
   PrivateLoadBalancer:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/27c971f4b6aab9a7568e88568a4b260b.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/13099a64bf43fb6d09abe35c23ae0ba3.template
       Parameters:
         Scheme: internal
         Subnets:
@@ -311,6 +311,10 @@ Resources:
           Ref: Env
   ECSService:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - ECSCluster
+    - ECSTask
+    - LoadBalancerRule
     Properties:
       TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ef4c9f6ebf9c1c30b187ad655dc1dedc.template
       Parameters:
