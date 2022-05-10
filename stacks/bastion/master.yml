@@ -19,7 +19,7 @@ Resources:
       # ConnectionType: CONNECT_SSH
       InstanceType: t2.micro
       Name: !Sub ${ProductName}-bastion-${Env}
-      SubnetId: !ImportValue PublicSubnetAForBastion
+      SubnetId: !ImportValue PublicSubnetAForCloud9
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName

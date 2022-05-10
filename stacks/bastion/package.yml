@@ -18,7 +18,7 @@ Resources:
       Name:
         Fn::Sub: ${ProductName}-bastion-${Env}
       SubnetId:
-        Fn::ImportValue: PublicSubnetAForBastion
+        Fn::ImportValue: PublicSubnetAForCloud9
       Tags:
       - Key: ProductName
         Value:

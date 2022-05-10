@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   VPC,Subnet,NATGateway,RouteTable
 
+# Lowercase letters
 Parameters:
   ProductName:
     Type: String
@@ -24,6 +25,7 @@ Resources:
         CidrBlock: '10.1.0.0/16'
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-vpc
 
   #########################################
   # Subnet
@@ -38,6 +40,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-public-subnet-a
   PublicSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -48,6 +51,7 @@ Resources:
         AZ: 2
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-public-subnet-c
   PrivateSubnetA:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -58,6 +62,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-private-subnet-a
   PrivateSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -68,6 +73,7 @@ Resources:
         AZ: 2
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-private-subnet-c
   PrivateSubnetAForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -78,6 +84,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-private-subnet-a-db
   PrivateSubnetCForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -88,7 +95,8 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-  PublicSubnetAForBastion:
+        Name: !Sub ${ProductName}-${Env}-private-subnet-c-db
+  PublicSubnetAForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../templates/vpc/subnet.yml'
@@ -98,7 +106,8 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-  PublicSubnetCForBastion:
+        Name: !Sub ${ProductName}-${Env}-private-subnet-a-cloud9
+  PublicSubnetCForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../templates/vpc/subnet.yml'
@@ -108,6 +117,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-private-subnet-a-cloud9
   PrivateSubnetAForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -118,6 +128,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-private-subnet-a-vpcendpoint
   PrivateSubnetCForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -128,6 +139,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-private-subnet-c-vpcendpoint
 
   #########################################
   # InternetGateway
@@ -141,6 +153,8 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Sub ${ProductName}-${Env}-internet-gateway
   GatewayAttachement:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -158,6 +172,7 @@ Resources:
         VPC: !GetAtt VPC.Outputs.VpcId
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-${Env}-public-route-table
   PublicRoute:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -173,8 +188,6 @@ Resources:
       Parameters:
         SubnetId: !GetAtt PublicSubnetA.Outputs.SubnetId
         RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
-        ProductName: !Ref ProductName
-        Env: !Ref Env
   PublicSubnetCRouteTableAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -182,8 +195,6 @@ Resources:
       Parameters:
         SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
         RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
-        ProductName: !Ref ProductName
-        Env: !Ref Env
 
 Outputs:
   VPC:
@@ -214,14 +225,14 @@ Outputs:
     Value: !GetAtt PrivateSubnetCForDB.Outputs.SubnetId
     Export:
       Name: PrivateSubnetCForDB
-  PublicSubnetAForBastion:
-    Value: !GetAtt PublicSubnetAForBastion.Outputs.SubnetId
+  PublicSubnetAForCloud9:
+    Value: !GetAtt PublicSubnetAForCloud9.Outputs.SubnetId
     Export:
-      Name: PublicSubnetAForBastion
-  PublicSubnetCForBastion:
-    Value: !GetAtt PublicSubnetCForBastion.Outputs.SubnetId
+      Name: PublicSubnetAForCloud9
+  PublicSubnetCForCloud9:
+    Value: !GetAtt PublicSubnetCForCloud9.Outputs.SubnetId
     Export:
-      Name: PublicSubnetCForBastion
+      Name: PublicSubnetCForCloud9
   PrivateSubnetAForVPCEndpoint:
     Value: !GetAtt PrivateSubnetAForVPCEndpoint.Outputs.SubnetId
     Export:
