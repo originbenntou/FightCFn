@@ -22,8 +22,6 @@ Parameters:
     Type: CommaDelimitedList
   TaskDefinitionArn:
     Type: String
-  ContainerName:
-    Type: String
   ContainerPort:
     Type: Number
   TargetGroupArn:
@@ -48,7 +46,7 @@ Resources:
           Subnets: !Ref Subnets
       TaskDefinition: !Ref TaskDefinitionArn
       LoadBalancers:
-        - ContainerName: !Ref ContainerName
+        - ContainerName: !Ref ProductName # コンテナ名
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroupArn
       Tags:
