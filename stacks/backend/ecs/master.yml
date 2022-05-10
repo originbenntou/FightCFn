@@ -71,6 +71,7 @@ Resources:
         IpProtocol: tcp
         FromPort: 80
         ToPort: 8080
+
 # もしかしてEgressは勝手にできてる...？
 #  PublicALBSecurityGroupEgressToIGW:
 #    Type: AWS::CloudFormation::Stack
@@ -236,6 +237,99 @@ Resources:
           Values: [!Ref Path]
       ListenerArn: !GetAtt DefaultTargetGroupListenerForPublicALB.Outputs.TargetGroupListener
       Priority: !Ref Priority
+
+  #########################################
+  # Security Group For VPCEndpoint
+  #########################################
+  VPCEndpointSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  VPCEndpointSecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/egress.yml'
+      Parameters:
+        GroupId: !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        IpProtocol: -1
+
+  #########################################
+  # RouteTable For ECS VPCEndpoint（Gateway）
+  #########################################
+  RouteTableForECSVPCEndpoint:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetARouteTableForECSVPCEndpointAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetA
+        RouteTableId: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  PrivateSubnetCRouteTableForECSVPCEndpointAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetC
+        RouteTableId: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+
+  #########################################
+  # VPCEndpoint
+  #########################################
+  VPCEndpointECRApi:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.ecr.api'
+        VpcEndpointType: Interface
+        VpcId: !ImportValue VPC
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
+        SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
+        RouteTableIds: ''
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  VPCEndpointECRDkr:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.ecr.dkr'
+        VpcEndpointType: Interface
+        VpcId: !ImportValue VPC
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
+        SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
+        RouteTableIds: ''
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+  VPCEndpointS3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.s3'
+        VpcEndpointType: Gateway
+        VpcId: !ImportValue VPC
+        SubnetIds: ''
+        SecurityGroupIds: ''
+        RouteTableIds: !Join [ ',', [ !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable ] ]
+        ProductName: !Ref ProductName
+        Env: !Ref Env
 
   #########################################
   # ECS Cluster

@@ -153,22 +153,23 @@ Resources:
   # EIPでPrivateSubnet内のリソースにアクセスする用
   # PrivateSubnetへの通信はALBのみに制限するのが、よりセキュア 特に用がないなら削除推奨
   #########################################
-  NatGatewayA:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../templates/vpc/nat_gateway.yml'
-      Parameters:
-        SubnetId: !GetAtt PublicSubnetA.Outputs.SubnetId
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-  NatGatewayC:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../templates/vpc/nat_gateway.yml'
-      Parameters:
-        SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
-        ProductName: !Ref ProductName
-        Env: !Ref Env
+  # NatGateway取り外し
+#  NatGatewayA:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/nat_gateway.yml'
+#      Parameters:
+#        SubnetId: !GetAtt PublicSubnetA.Outputs.SubnetId
+#        ProductName: !Ref ProductName
+#        Env: !Ref Env
+#  NatGatewayC:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/nat_gateway.yml'
+#      Parameters:
+#        SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
+#        ProductName: !Ref ProductName
+#        Env: !Ref Env
 
   #########################################
   # PublicRouteTable
@@ -179,10 +180,15 @@ Resources:
       TemplateURL: '../../templates/vpc/route_table.yml'
       Parameters:
         VPC: !GetAtt VPC.Outputs.VpcId
-        GatewayId: !Ref InternetGateway
-        NatGatewayId: ''
         ProductName: !Ref ProductName
         Env: !Ref Env
+  PublicRoute:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../templates/vpc/route.yml'
+      Parameters:
+        GatewayId: !Ref InternetGateway
+        NatGatewayId: ''
   PublicSubnetARouteTableAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -205,44 +211,55 @@ Resources:
   #########################################
   # PrivateRouteTable
   #########################################
-  PrivateRouteTableA:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../templates/vpc/route_table.yml'
-      Parameters:
-        VPC: !GetAtt VPC.Outputs.VpcId
-        GatewayId: ''
-        NatGatewayId: !GetAtt NatGatewayA.Outputs.NatGateway
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-  PrivateSubnetARouteTableAssociation:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../templates/vpc/route_table_associate.yml'
-      Parameters:
-        SubnetId: !GetAtt PrivateSubnetA.Outputs.SubnetId
-        RouteTableId: !GetAtt PrivateRouteTableA.Outputs.RouteTable
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-  PrivateRouteTableC:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../templates/vpc/route_table.yml'
-      Parameters:
-        VPC: !GetAtt VPC.Outputs.VpcId
-        GatewayId: ''
-        NatGatewayId: !GetAtt NatGatewayC.Outputs.NatGateway
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-  PrivateSubnetCRouteTableAssociation:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../templates/vpc/route_table_associate.yml'
-      Parameters:
-        SubnetId: !GetAtt PrivateSubnetC.Outputs.SubnetId
-        RouteTableId: !GetAtt PrivateRouteTableC.Outputs.RouteTable
-        ProductName: !Ref ProductName
-        Env: !Ref Env
+  # NatGateway取り外し
+#  PrivateRouteTableA:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/route_table.yml'
+#      Parameters:
+#        VPC: !GetAtt VPC.Outputs.VpcId
+#        ProductName: !Ref ProductName
+#        Env: !Ref Env
+#  PrivateRouteA:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/route.yml'
+#      Parameters:
+#        GatewayId: ''
+#        NatGatewayId: !GetAtt NatGatewayA.Outputs.NatGateway
+#  PrivateSubnetARouteTableAssociation:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+#      Parameters:
+#        SubnetId: !GetAtt PrivateSubnetA.Outputs.SubnetId
+#        RouteTableId: !GetAtt PrivateRouteTableA.Outputs.RouteTable
+#        ProductName: !Ref ProductName
+#        Env: !Ref Env
+#  PrivateRouteTableC:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/route_table.yml'
+#      Parameters:
+#        VPC: !GetAtt VPC.Outputs.VpcId
+#        ProductName: !Ref ProductName
+#        Env: !Ref Env
+#  PrivateRouteC:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/route.yml'
+#      Parameters:
+#        GatewayId: ''
+#        NatGatewayId: !GetAtt NatGatewayC.Outputs.NatGateway
+#  PrivateSubnetCRouteTableAssociation:
+#    Type: AWS::CloudFormation::Stack
+#    Properties:
+#      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+#      Parameters:
+#        SubnetId: !GetAtt PrivateSubnetC.Outputs.SubnetId
+#        RouteTableId: !GetAtt PrivateRouteTableC.Outputs.RouteTable
+#        ProductName: !Ref ProductName
+#        Env: !Ref Env
 
 Outputs:
   VPC:

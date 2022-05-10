@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  ServiceName:
+    Type: String
+  VpcEndpointType:
+    Type: String
+    AllowedValues:
+      - Gateway
+      - GatewayLoadBalancer
+      - Interface
+  VpcId:
+    Type: String
+  SubnetIds:
+    Type: CommaDelimitedList
+  SecurityGroupIds:
+    Type: CommaDelimitedList
+  RouteTableIds:
+    Type: CommaDelimitedList
+
+Conditions:
+  isEmptySubnetIds: !Equals [ !Join [ ',', !Ref SubnetIds ], '' ]
+  isEmptySecurityGroupIds: !Equals [ !Join [ ',', !Ref SecurityGroupIds ], '' ]
+  isEmptyRouteTableIds: !Equals [ !Join [ ',', !Ref RouteTableIds ], '' ]
+
+Resources:
+  VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Ref ServiceName
+      VpcEndpointType: !Ref VpcEndpointType
+      VpcId: !Ref VpcId
+      SubnetIds: !If [ isEmptySubnetIds, !Ref AWS::NoValue, !Ref SubnetIds ]
+      SecurityGroupIds: !If [ isEmptySecurityGroupIds, !Ref AWS::NoValue, !Ref SecurityGroupIds ]
+      RouteTableIds: !If [ isEmptyRouteTableIds, !Ref AWS::NoValue, !Ref RouteTableIds ]
+
+Outputs:
+  VPCEndpointId:
+    Value: !Ref VPCEndpoint

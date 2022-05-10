@@ -15,7 +15,7 @@ Resources:
       Description: !Ref AWS::StackName
       GroupId: !Ref GroupId
       CidrIp: !Ref CidrIp
-      IpProtocol: tcp
+      IpProtocol: !Ref IpProtocol
 
 Outputs:
   SecurityGroupEgress:

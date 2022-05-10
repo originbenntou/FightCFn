@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  RouteTable:
+    Type: String
+  GatewayId:
+    Type: String
+  NatGatewayId:
+    Type: String
+
+Conditions:
+  isEmptyGatewayId: !Equals [ !Ref GatewayId, '' ]
+  isEmptyNatGatewayId: !Equals [ !Ref NatGatewayId, '' ]
+
+Resources:
+  Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !If [ isEmptyGatewayId, !Ref AWS::NoValue, !Ref GatewayId ]
+      NatGatewayId: !If [ isEmptyNatGatewayId, !Ref AWS::NoValue, !Ref NatGatewayId ]
+
+Outputs:
+  Route:
+    Value: !Ref Route
