@@ -78,6 +78,7 @@ Resources:
   #    Properties:
   #      TemplateURL: '../../templates/vpc/route.yml'
   #      Parameters:
+  #        RouteTableId: PrivateRouteTableA.Outputs.RouteTable
   #        GatewayId: ''
   #        NatGatewayId: !GetAtt NatGatewayA.Outputs.NatGateway
   #  PrivateSubnetARouteTableAssociation:
@@ -102,6 +103,7 @@ Resources:
   #    Properties:
   #      TemplateURL: '../../templates/vpc/route.yml'
   #      Parameters:
+  #        RouteTableId: PrivateRouteTableA.Outputs.RouteTable
   #        GatewayId: ''
   #        NatGatewayId: !GetAtt NatGatewayC.Outputs.NatGateway
   #  PrivateSubnetCRouteTableAssociation:
@@ -111,6 +113,63 @@ Resources:
   #      Parameters:
   #        SubnetId: !GetAtt PrivateSubnetC.Outputs.SubnetId
   #        RouteTableId: !GetAtt PrivateRouteTableC.Outputs.RouteTable
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+
+  #########################################
+  # Security Group For Private Load Balancer
+  #########################################
+  #  PrivateLoadBalancerSecurityGroup:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/security_group.yml'
+  #      Parameters:
+  #        VPC: !ImportValue VPC
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #  PrivateALBSecurityGroupIngressFromECS:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+  #      Parameters:
+  #        IpProtocol: '-1'
+  #        FromPort: ''
+  #        ToPort: ''
+  #        GroupId: !GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+  #        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+
+  #########################################
+  # Private Load Balancer
+  #########################################
+  #  PrivateLoadBalancer:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/ec2/load_balancer.yml'
+  #      Parameters:
+  #        Scheme: 'internal'
+  #        Subnets: !Join [ ',', [!ImportValue PrivateSubnetA, !ImportValue PrivateSubnetC] ]
+  #        SecurityGroups: !Join [ ',', [!GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId] ]
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+
+  #########################################
+  # TargetGroup For Private ALB
+  #########################################
+  #  DefaultTargetGroupForPrivateALB:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/ec2/target_group.yml'
+  #      Parameters:
+  #        VpcId: !ImportValue VPC
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #  DefaultTargetGroupListenerForPrivateALB:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/ec2/target_group_listener.yml'
+  #      Parameters:
+  #        TargetGroupArn: !GetAtt DefaultTargetGroupForPrivateALB.Outputs.TargetGroupArn
+  #        LoadBalancerArn: !GetAtt PrivateLoadBalancer.Outputs.LoadBalancerArn
   #        ProductName: !Ref ProductName
   #        Env: !Ref Env
 
@@ -159,26 +218,6 @@ Resources:
 #        IpProtocol: -1
 
   #########################################
-  # Security Group For Private Load Balancer
-  #########################################
-  PrivateLoadBalancerSecurityGroup:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../../templates/vpc/security_group.yml'
-      Parameters:
-        VPC: !ImportValue VPC
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-  PrivateALBSecurityGroupIngressFromECS:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
-      Parameters:
-        IpProtocol: '-1'
-        GroupId: !GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId
-        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
-
-  #########################################
   # Security Group For ECS
   #########################################
   ECSContainerSecurityGroup:
@@ -195,22 +234,28 @@ Resources:
       TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
       Parameters:
         IpProtocol: '-1'
+        FromPort: ''
+        ToPort: ''
         GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
         SourceSecurityGroupId: !GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId
-  ECSSecurityGroupIngressFromPrivateALB:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
-      Parameters:
-        IpProtocol: '-1'
-        GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
-        SourceSecurityGroupId: !GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+  #  ECSSecurityGroupIngressFromPrivateALB:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+  #      Parameters:
+  #        IpProtocol: '-1'
+  #        FromPort: ''
+  #        ToPort: ''
+  #        GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+  #        SourceSecurityGroupId: !GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId
   ECSSecurityGroupIngressFromSelf:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
       Parameters:
         IpProtocol: '-1'
+        FromPort: ''
+        ToPort: ''
         GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
         SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
 
@@ -246,41 +291,6 @@ Resources:
       Parameters:
         TargetGroupArn: !GetAtt DefaultTargetGroupForPublicALB.Outputs.TargetGroupArn
         LoadBalancerArn: !GetAtt PublicLoadBalancer.Outputs.LoadBalancerArn
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-
-  #########################################
-  # Private Load Balancer
-  #########################################
-  PrivateLoadBalancer:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../../templates/ec2/load_balancer.yml'
-      Parameters:
-        Scheme: 'internal'
-        Subnets: !Join [ ',', [!ImportValue PrivateSubnetA, !ImportValue PrivateSubnetC] ]
-        SecurityGroups: !Join [ ',', [!GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId] ]
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-
-  #########################################
-  # TargetGroup For Private ALB
-  #########################################
-  DefaultTargetGroupForPrivateALB:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../../templates/ec2/target_group.yml'
-      Parameters:
-        VpcId: !ImportValue VPC
-        ProductName: !Ref ProductName
-        Env: !Ref Env
-  DefaultTargetGroupListenerForPrivateALB:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: '../../../templates/ec2/target_group_listener.yml'
-      Parameters:
-        TargetGroupArn: !GetAtt DefaultTargetGroupForPrivateALB.Outputs.TargetGroupArn
-        LoadBalancerArn: !GetAtt PrivateLoadBalancer.Outputs.LoadBalancerArn
         ProductName: !Ref ProductName
         Env: !Ref Env
 
@@ -325,6 +335,16 @@ Resources:
         VPC: !ImportValue VPC
         ProductName: !Ref ProductName
         Env: !Ref Env
+  VPCEndpointSecurityGroupIngress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        GroupId: !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
   VPCEndpointSecurityGroupEgress:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -374,6 +394,7 @@ Resources:
       Parameters:
         ServiceName: 'com.amazonaws.ap-northeast-1.ecr.api'
         VpcEndpointType: Interface
+        PrivateDnsEnabled: true
         VpcId: !ImportValue VPC
         SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
         SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
@@ -387,6 +408,7 @@ Resources:
       Parameters:
         ServiceName: 'com.amazonaws.ap-northeast-1.ecr.dkr'
         VpcEndpointType: Interface
+        PrivateDnsEnabled: true
         VpcId: !ImportValue VPC
         SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
         SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]

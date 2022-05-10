@@ -15,7 +15,7 @@ Resources:
     Properties:
       TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/d5c108ffe5580c8236bf83c932cff09c.template
       Parameters:
-        CidrBlock: 10.0.0.0/16
+        CidrBlock: 10.1.0.0/16
         ProductName:
           Ref: ProductName
         Env:
@@ -29,7 +29,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.0.0/24
+        CidrBlock: 10.1.0.0/24
         AZ: 0
         ProductName:
           Ref: ProductName
@@ -44,7 +44,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.1.0/24
+        CidrBlock: 10.1.1.0/24
         AZ: 2
         ProductName:
           Ref: ProductName
@@ -59,7 +59,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.8.0/24
+        CidrBlock: 10.1.8.0/24
         AZ: 0
         ProductName:
           Ref: ProductName
@@ -74,7 +74,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.9.0/24
+        CidrBlock: 10.1.9.0/24
         AZ: 2
         ProductName:
           Ref: ProductName
@@ -89,7 +89,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.16.0/24
+        CidrBlock: 10.1.16.0/24
         AZ: 0
         ProductName:
           Ref: ProductName
@@ -104,7 +104,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.17.0/24
+        CidrBlock: 10.1.17.0/24
         AZ: 1
         ProductName:
           Ref: ProductName
@@ -119,7 +119,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.240.0/24
+        CidrBlock: 10.1.240.0/24
         AZ: 0
         ProductName:
           Ref: ProductName
@@ -134,7 +134,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.241.0/24
+        CidrBlock: 10.1.241.0/24
         AZ: 1
         ProductName:
           Ref: ProductName
@@ -149,7 +149,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.248.0/24
+        CidrBlock: 10.1.248.0/24
         AZ: 0
         ProductName:
           Ref: ProductName
@@ -164,7 +164,7 @@ Resources:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        CidrBlock: 10.0.249.0/24
+        CidrBlock: 10.1.249.0/24
         AZ: 1
         ProductName:
           Ref: ProductName
@@ -192,19 +192,28 @@ Resources:
   PublicRouteTable:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/4ec11beeaa3198e4de6d61138012afbf.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/7fc042774ee153c2d11356ffda33a93b.template
       Parameters:
         VPC:
           Fn::GetAtt:
           - VPC
           - Outputs.VpcId
-        GatewayId:
-          Ref: InternetGateway
-        NatGatewayId: ''
         ProductName:
           Ref: ProductName
         Env:
           Ref: Env
+  PublicRoute:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/30f3cea1220ce60a41c53ca8e5f3d32f.template
+      Parameters:
+        RouteTableId:
+          Fn::GetAtt:
+          - PublicRouteTable
+          - Outputs.RouteTable
+        GatewayId:
+          Ref: InternetGateway
+        NatGatewayId: ''
   PublicSubnetARouteTableAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:

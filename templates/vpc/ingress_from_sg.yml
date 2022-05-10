@@ -3,10 +3,18 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   IpProtocol:
     Type: String
+  FromPort:
+    Type: String
+  ToPort:
+    Type: String
   GroupId:
     Type: String
   SourceSecurityGroupId:
     Type: String
+
+Conditions:
+  isEmptyFromPort: !Equals [ !Ref FromPort, '' ]
+  isEmptyToPort: !Equals [ !Ref ToPort, '' ]
 
 Resources:
   SecurityGroupIngress:
@@ -14,6 +22,8 @@ Resources:
     Properties:
       Description: !Ref AWS::StackName
       IpProtocol: !Ref IpProtocol
+      FromPort: !If [ isEmptyFromPort, !Ref AWS::NoValue, !Ref FromPort ]
+      ToPort: !If [ isEmptyToPort, !Ref AWS::NoValue, !Ref ToPort ]
       GroupId: !Ref GroupId
       SourceSecurityGroupId: !Ref SourceSecurityGroupId
 

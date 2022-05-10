@@ -70,31 +70,6 @@ Resources:
         IpProtocol: tcp
         FromPort: 80
         ToPort: 8080
-  PrivateLoadBalancerSecurityGroup:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ce4f70740ae88a6319ff85971b0e51c2.template
-      Parameters:
-        VPC:
-          Fn::ImportValue: VPC
-        ProductName:
-          Ref: ProductName
-        Env:
-          Ref: Env
-  PrivateALBSecurityGroupIngressFromECS:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
-      Parameters:
-        IpProtocol: '-1'
-        GroupId:
-          Fn::GetAtt:
-          - PrivateLoadBalancerSecurityGroup
-          - Outputs.SecurityGroupId
-        SourceSecurityGroupId:
-          Fn::GetAtt:
-          - ECSContainerSecurityGroup
-          - Outputs.SecurityGroupId
   ECSContainerSecurityGroup:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -109,9 +84,11 @@ Resources:
   ECSSecurityGroupIngressFromPublicALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/b45906466c1103745f63aabdeb9a570a.template
       Parameters:
         IpProtocol: '-1'
+        FromPort: ''
+        ToPort: ''
         GroupId:
           Fn::GetAtt:
           - ECSContainerSecurityGroup
@@ -120,26 +97,14 @@ Resources:
           Fn::GetAtt:
           - PublicLoadBalancerSecurityGroup
           - Outputs.SecurityGroupId
-  ECSSecurityGroupIngressFromPrivateALB:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
-      Parameters:
-        IpProtocol: '-1'
-        GroupId:
-          Fn::GetAtt:
-          - ECSContainerSecurityGroup
-          - Outputs.SecurityGroupId
-        SourceSecurityGroupId:
-          Fn::GetAtt:
-          - PrivateLoadBalancerSecurityGroup
-          - Outputs.SecurityGroupId
   ECSSecurityGroupIngressFromSelf:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/625dc3cb6eec7675d94d1642856291f4.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/b45906466c1103745f63aabdeb9a570a.template
       Parameters:
         IpProtocol: '-1'
+        FromPort: ''
+        ToPort: ''
         GroupId:
           Fn::GetAtt:
           - ECSContainerSecurityGroup
@@ -197,55 +162,6 @@ Resources:
           Ref: ProductName
         Env:
           Ref: Env
-  PrivateLoadBalancer:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/13099a64bf43fb6d09abe35c23ae0ba3.template
-      Parameters:
-        Scheme: internal
-        Subnets:
-          Fn::Join:
-          - ','
-          - - Fn::ImportValue: PrivateSubnetA
-            - Fn::ImportValue: PrivateSubnetC
-        SecurityGroups:
-          Fn::Join:
-          - ','
-          - - Fn::GetAtt:
-              - PrivateLoadBalancerSecurityGroup
-              - Outputs.SecurityGroupId
-        ProductName:
-          Ref: ProductName
-        Env:
-          Ref: Env
-  DefaultTargetGroupForPrivateALB:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/f208e16b382baba6b718c8d1c8a8a689.template
-      Parameters:
-        VpcId:
-          Fn::ImportValue: VPC
-        ProductName:
-          Ref: ProductName
-        Env:
-          Ref: Env
-  DefaultTargetGroupListenerForPrivateALB:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/89b5f3fa0cf298ba80cfa2ee71ff3697.template
-      Parameters:
-        TargetGroupArn:
-          Fn::GetAtt:
-          - DefaultTargetGroupForPrivateALB
-          - Outputs.TargetGroupArn
-        LoadBalancerArn:
-          Fn::GetAtt:
-          - PrivateLoadBalancer
-          - Outputs.LoadBalancerArn
-        ProductName:
-          Ref: ProductName
-        Env:
-          Ref: Env
   TargetGroupForECS:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -292,6 +208,22 @@ Resources:
           Ref: ProductName
         Env:
           Ref: Env
+  VPCEndpointSecurityGroupIngress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/b45906466c1103745f63aabdeb9a570a.template
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        GroupId:
+          Fn::GetAtt:
+          - VPCEndpointSecurityGroup
+          - Outputs.SecurityGroupId
+        SourceSecurityGroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
   VPCEndpointSecurityGroupEgress:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -347,10 +279,11 @@ Resources:
   VPCEndpointECRApi:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ceb4f0a89b040c558ccdd101cd340b5a.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/c498e36093663a67b10d5142fc0c8e75.template
       Parameters:
         ServiceName: com.amazonaws.ap-northeast-1.ecr.api
         VpcEndpointType: Interface
+        PrivateDnsEnabled: true
         VpcId:
           Fn::ImportValue: VPC
         SubnetIds:
@@ -372,10 +305,11 @@ Resources:
   VPCEndpointECRDkr:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ceb4f0a89b040c558ccdd101cd340b5a.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/c498e36093663a67b10d5142fc0c8e75.template
       Parameters:
         ServiceName: com.amazonaws.ap-northeast-1.ecr.dkr
         VpcEndpointType: Interface
+        PrivateDnsEnabled: true
         VpcId:
           Fn::ImportValue: VPC
         SubnetIds:
@@ -397,7 +331,7 @@ Resources:
   VPCEndpointS3:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/ceb4f0a89b040c558ccdd101cd340b5a.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-ecs/c498e36093663a67b10d5142fc0c8e75.template
       Parameters:
         ServiceName: com.amazonaws.ap-northeast-1.s3
         VpcEndpointType: Gateway

@@ -18,6 +18,9 @@ Parameters:
       - Gateway
       - GatewayLoadBalancer
       - Interface
+  PrivateDnsEnabled:
+    Type: String
+    Default: false
   VpcId:
     Type: String
   SubnetIds:
@@ -38,6 +41,7 @@ Resources:
     Properties:
       ServiceName: !Ref ServiceName
       VpcEndpointType: !Ref VpcEndpointType
+      PrivateDnsEnabled: !Ref PrivateDnsEnabled
       VpcId: !Ref VpcId
       SubnetIds: !If [ isEmptySubnetIds, !Ref AWS::NoValue, !Ref SubnetIds ]
       SecurityGroupIds: !If [ isEmptySecurityGroupIds, !Ref AWS::NoValue, !Ref SecurityGroupIds ]

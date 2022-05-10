@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
 Parameters:
-  RouteTable:
+  RouteTableId:
     Type: String
   GatewayId:
     Type: String
@@ -16,7 +16,7 @@ Resources:
   Route:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref RouteTable
+      RouteTableId: !Ref RouteTableId
       DestinationCidrBlock: '0.0.0.0/0'
       GatewayId: !If [ isEmptyGatewayId, !Ref AWS::NoValue, !Ref GatewayId ]
       NatGatewayId: !If [ isEmptyNatGatewayId, !Ref AWS::NoValue, !Ref NatGatewayId ]
