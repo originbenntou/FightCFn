@@ -25,7 +25,7 @@ Resources:
         CidrBlock: '10.1.0.0/16'
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-vpc
+        Name: !Sub vpc-${Env}
 
   #########################################
   # Subnet
@@ -40,7 +40,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-public-subnet-a
+        Name: !Sub public-subnet-a-${Env}
   PublicSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -51,7 +51,7 @@ Resources:
         AZ: 2
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-public-subnet-c
+        Name: !Sub public-subnet-c-${Env}
   PrivateSubnetA:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -62,7 +62,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-a
+        Name: !Sub private-subnet-a-${Env}
   PrivateSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -73,7 +73,7 @@ Resources:
         AZ: 2
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-c
+        Name: !Sub private-subnet-c-${Env}
   PrivateSubnetAForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -84,7 +84,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-a-db
+        Name: !Sub private-subnet-a-db-${Env}
   PrivateSubnetCForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -95,7 +95,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-c-db
+        Name: !Sub private-subnet-c-db-${Env}
   PublicSubnetAForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -106,7 +106,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-a-cloud9
+        Name: !Sub private-subnet-a-cloud9-${Env}
   PublicSubnetCForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -117,7 +117,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-a-cloud9
+        Name: !Sub private-subnet-a-cloud9-${Env}
   PrivateSubnetAForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -128,7 +128,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-a-vpcendpoint
+        Name: !Sub private-subnet-a-vpcendpoint-${Env}
   PrivateSubnetCForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -139,7 +139,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-private-subnet-c-vpcendpoint
+        Name: !Sub private-subnet-c-vpcendpoint-${Env}
 
   #########################################
   # InternetGateway
@@ -154,7 +154,7 @@ Resources:
         - Key: 'Env'
           Value: !Ref Env
         - Key: 'Name'
-          Value: !Sub ${ProductName}-${Env}-internet-gateway
+          Value: !Sub internet-gateway-${Env}
   GatewayAttachement:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -172,7 +172,7 @@ Resources:
         VPC: !GetAtt VPC.Outputs.VpcId
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-${Env}-public-route-table
+        Name: !Sub public-route-table-${Env}
   PublicRoute:
     Type: AWS::CloudFormation::Stack
     Properties:

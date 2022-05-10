@@ -25,7 +25,7 @@ Resources:
     Properties:
       TemplateURL: '../../../templates/s3/bucket.yml'
       Parameters:
-        BucketName: !Sub ${ProductName}-pipeline-artifact-${Env}
+        BucketName: !Sub pipeline-artifact-${Env}
         ExpirationInDays: 30
         ProductName: !Ref ProductName
         Env: !Ref Env
@@ -41,7 +41,7 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
-      Name: !Sub ${ProductName}-codebuild-${Env}
+      Name: !Sub codebuild-${Env}
       ServiceRole: !Ref CodeBuildServiceRole
       Artifacts:
         Type: CODEPIPELINE

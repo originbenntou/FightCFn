@@ -42,6 +42,7 @@ Resources:
       Parameters:
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-cluster-${Env}
 
   #########################################
   # ECS Task
@@ -58,6 +59,7 @@ Resources:
         ExecutionRoleArn: !Ref ECSTaskExecutionRole
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-taskdef-${Env}
 
   #########################################
   # ECS Service
@@ -79,6 +81,7 @@ Resources:
         TargetGroupArn: !ImportValue TargetGroupForECS
         ProductName: !Ref ProductName
         Env: !Ref Env
+        Name: !Sub ${ProductName}-service-${Env}
 
   #########################################
   # IAM

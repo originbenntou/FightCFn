@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   BucketName:
     Type: String
@@ -43,6 +45,8 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   Bucket:

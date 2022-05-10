@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   ContainerCpu:
     Type: Number
@@ -26,7 +28,7 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
-      Family: !Sub ${ProductName}-service-${Env}
+      Family: !Ref Name
       Cpu: !Ref ContainerCpu
       Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
@@ -35,14 +37,22 @@ Resources:
       ExecutionRoleArn: !Ref ExecutionRoleArn
       TaskRoleArn: !Ref AWS::NoValue
       ContainerDefinitions:
-        - Name: !Sub ${ProductName}-service-${Env}
+        - Name: !Ref ProductName # コンテナ名
           Cpu: !Ref ContainerCpu
           Memory: !Ref ContainerMemory
           Image: !Ref ImageUrl
           PortMappings:
             - ContainerPort: !Ref ContainerPort
-#          LogConfiguration:
-#            LogDriver: awslogs
+          # FIXME
+          # LogConfiguration:
+          #   LogDriver: awslogs
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   TaskDefinitionArn:

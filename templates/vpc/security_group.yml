@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   VPC:
     Type: String
@@ -18,6 +20,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
+      GroupName: !Ref Name
       GroupDescription: !Ref AWS::StackName
       VpcId: !Ref VPC
       Tags:
@@ -25,6 +28,8 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   SecurityGroupId:

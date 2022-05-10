@@ -18,7 +18,7 @@ Resources:
       AutomaticStopTimeMinutes: 30
       # ConnectionType: CONNECT_SSH
       InstanceType: t2.micro
-      Name: !Sub ${ProductName}-bastion-${Env}
+      Name: !Sub operation-${Env}
       SubnetId: !ImportValue PublicSubnetAForCloud9
       Tags:
         - Key: 'ProductName'

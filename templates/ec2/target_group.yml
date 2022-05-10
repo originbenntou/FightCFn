@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   VpcId:
     Type: String
@@ -23,7 +25,7 @@ Resources:
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-#      Name: !Join ['-', [!Ref 'AWS::StackName', 'default']]
+      Name: !Ref Name
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
@@ -33,6 +35,8 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   TargetGroupArn:

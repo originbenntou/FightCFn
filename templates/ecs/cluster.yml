@@ -9,18 +9,22 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
 Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
-      ClusterName: !Sub ${ProductName}-cluster-${Env}
+      ClusterName: !Ref Name
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   ECSClusterArn:

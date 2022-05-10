@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   Scheme:
     Type: String
@@ -22,6 +24,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
+      Name: !Ref Name
       Scheme: !Ref Scheme
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
@@ -39,6 +42,8 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   LoadBalancerArn:

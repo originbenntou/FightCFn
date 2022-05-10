@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   SubnetId:
     Type: String
@@ -19,12 +21,27 @@ Resources:
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
       Domain: vpc
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
+
   NatGateway:
     Type: AWS::EC2::NatGateway
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
       AllocationId: !GetAtt NatGatewayAttachment.AllocationId
       SubnetId: !Ref SubnetId
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   NatGateway:

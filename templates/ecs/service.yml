@@ -9,6 +9,8 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   ClusterArn:
     Type: String
@@ -20,6 +22,8 @@ Parameters:
     Type: CommaDelimitedList
   TaskDefinitionArn:
     Type: String
+  ContainerName:
+    Type: String
   ContainerPort:
     Type: Number
   TargetGroupArn:
@@ -30,7 +34,7 @@ Resources:
     Type: AWS::ECS::Service
     DeletionPolicy: Delete # FIXME: DEV環境とそれ以外で分岐
     Properties:
-      ServiceName: !Sub ${ProductName}-service-${Env}
+      ServiceName: !Ref Name
       Cluster: !Ref ClusterArn
       LaunchType: FARGATE
       DeploymentConfiguration:
@@ -44,7 +48,7 @@ Resources:
           Subnets: !Ref Subnets
       TaskDefinition: !Ref TaskDefinitionArn
       LoadBalancers:
-        - ContainerName: !Sub ${ProductName}-service-${Env}
+        - ContainerName: !Ref ContainerName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroupArn
       Tags:
@@ -52,6 +56,8 @@ Resources:
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   Service:
