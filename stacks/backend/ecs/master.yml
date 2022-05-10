@@ -64,7 +64,7 @@ Resources:
   #########################################
   # PrivateRouteTable
   #########################################
-  # NatGateway取り外し
+  # NatGateway取り外し routetableってAとCで2ついるっけ...？
   #  PrivateRouteTableA:
   #    Type: AWS::CloudFormation::Stack
   #    Properties:
