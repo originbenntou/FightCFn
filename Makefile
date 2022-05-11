@@ -10,12 +10,12 @@ cfn_template_bucket?=cfn-template-$(product_name)-$(env)
 
 .PHONY: package-% deploy-% create_cfn_template_bucket
 
-package-%:
+pkg-%:
 	$(call _cfn_validate,$*)
 	@echo "\n"
 	$(call _cfn_package,$*)
 
-deploy-%:
+dep-%:
 	$(call _cfn_deploy,$*)
 
 define _cfn_validate
