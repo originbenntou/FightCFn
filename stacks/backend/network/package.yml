@@ -335,6 +335,81 @@ Resources:
           - - Fn::GetAtt:
               - RouteTableForECSVPCEndpoint
               - Outputs.RouteTable
+  RouteTableForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-network/843d3694e89bdf405398c2f338273784.template
+      Parameters:
+        VPC:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+        Name:
+          Fn::Sub: route-table-for-db-${Env}
+  PrivateSubnetARouteTableForDBAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-network/9faaf1b362a9c4d938f2b9f67342040b.template
+      Parameters:
+        SubnetId:
+          Fn::ImportValue: PrivateSubnetAForDB
+        RouteTableId:
+          Fn::GetAtt:
+          - RouteTableForDB
+          - Outputs.RouteTable
+  PrivateSubnetCRouteTableForDBAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-network/9faaf1b362a9c4d938f2b9f67342040b.template
+      Parameters:
+        SubnetId:
+          Fn::ImportValue: PrivateSubnetCForDB
+        RouteTableId:
+          Fn::GetAtt:
+          - RouteTableForDB
+          - Outputs.RouteTable
+  DBSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-network/347b60c54a86706f84beacb86f7f3392.template
+      Parameters:
+        VPC:
+          Fn::ImportValue: VPC
+        ProductName:
+          Ref: ProductName
+        Env:
+          Ref: Env
+        Name:
+          Fn::Sub: db-sg-${Env}
+  DBSecurityGroupIngress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-network/b45906466c1103745f63aabdeb9a570a.template
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        GroupId:
+          Fn::GetAtt:
+          - DBSecurityGroup
+          - Outputs.SecurityGroupId
+        SourceSecurityGroupId:
+          Fn::GetAtt:
+          - ECSContainerSecurityGroup
+          - Outputs.SecurityGroupId
+  DBSecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/backend-network/7fc29ae5d352f21c2d33d514c9d2eb0a.template
+      Parameters:
+        GroupId:
+          Fn::GetAtt:
+          - DBSecurityGroup
+          - Outputs.SecurityGroupId
+        CidrIp: 0.0.0.0/0
+        IpProtocol: -1
 Outputs:
   PublicLoadBalancerDnsName:
     Value:
@@ -353,3 +428,10 @@ Outputs:
       Ref: TargetGroupForECS
     Export:
       Name: TargetGroupForECS
+  DBSecurityGroup:
+    Value:
+      Fn::GetAtt:
+      - DBSecurityGroup
+      - Outputs.SecurityGroupId
+    Export:
+      Name: DBSecurityGroup

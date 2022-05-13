@@ -355,6 +355,7 @@ Resources:
 
   #########################################
   # RouteTable For ECS VPCEndpoint（Gateway）
+  # TODO: このルートテーブルどうなってるか見ておく
   #########################################
   RouteTableForECSVPCEndpoint:
     Type: AWS::CloudFormation::Stack
@@ -419,6 +420,67 @@ Resources:
         SecurityGroupIds: ''
         RouteTableIds: !Join [ ',', [ !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable ] ]
 
+
+  #########################################
+  # RouteTable For Database
+  # TODO: このルートテーブルどうなってるか見ておく
+  #########################################
+  RouteTableForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub route-table-for-db-${Env}
+  PrivateSubnetARouteTableForDBAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetAForDB
+        RouteTableId: !GetAtt RouteTableForDB.Outputs.RouteTable
+  PrivateSubnetCRouteTableForDBAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetCForDB
+        RouteTableId: !GetAtt RouteTableForDB.Outputs.RouteTable
+
+  #########################################
+  # Security Group For DB
+  #########################################
+  DBSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub db-sg-${Env}
+  DBSecurityGroupIngress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+  # DBSecurityGroupIngress: FIXME: Cloud9からも疎通させる
+  DBSecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/egress.yml'
+      Parameters:
+        GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        IpProtocol: -1
+
 Outputs:
   PublicLoadBalancerDnsName:
     Value: !GetAtt PublicLoadBalancer.Outputs.LoadBalancerDnsName
@@ -431,3 +493,8 @@ Outputs:
     Value: !Ref TargetGroupForECS
     Export:
       Name: TargetGroupForECS
+
+  DBSecurityGroup:
+    Value: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+    Export:
+      Name: DBSecurityGroup

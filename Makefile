@@ -41,7 +41,7 @@ define _cfn_deploy
 		--template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/package.yml \
 		--parameter-overrides ProductName=$(product_name) Env=$(env) \
 		--stack-name $(product_name)-$1-$(env) \
-		--capabilities CAPABILITY_NAMED_IAM \
+		--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
 		--no-fail-on-empty-changeset \
 		--profile $(aws_profile) \
 		--region $(aws_region)

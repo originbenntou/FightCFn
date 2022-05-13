@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::SecretsManager-2020-07-23
+
+Parameters:
+  SecretId:
+    Type: String
+  AutomaticallyAfterDays:
+    Type: Number
+  Duration:
+    Type: String
+
+Resources:
+  RotationSchedule:
+    Type: AWS::SecretsManager::RotationSchedule
+    Properties:
+      SecretId: !Ref SecretId
+      RotationRules:
+        AutomaticallyAfterDays: !Ref AutomaticallyAfterDays
+        Duration: !Ref Duration
+      # FIXME
+      HostedRotationLambda:
+        RotationLambdaName: SecretsManagerRotation
+        RotationType: MySQLSingleUser
+      RotateImmediatelyOnUpdate: true

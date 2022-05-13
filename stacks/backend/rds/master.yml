@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  ECSCluster,Service,Task,LoadBalancer,SecurityGroup
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+Resources:
+  #########################################
+  # Aurora Cluster（MySQL）
+  #########################################
+  DBSubnetGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/rds/subnet_group.yml'
+      Parameters:
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForDB, !ImportValue PrivateSubnetCForDB] ]
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-db-subnet-group-${Env}
+  ResourceDBCluster:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/rds/cluster.yml'
+      Parameters:
+        VpcSecurityGroupIds: !Join [ ',', [!ImportValue DBSecurityGroup] ]
+        DBSubnetGroup: !GetAtt DBSubnetGroup.Outputs.DBSubnetGroupId
+        DBSecret: !GetAtt RDBSecrets.Outputs.SecretId
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-resource-db-${Env}
+
+  #########################################
+  # Secrets Manager（RDB）
+  #########################################
+  RDBSecrets:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/secrets_manager/secret.yml'
+      Parameters:
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-rdb1-${Env}
+  RDBSecretsRotate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/secrets_manager/rotation_schedule.yml'
+      Parameters:
+        SecretId: !GetAtt RDBSecrets.Outputs.SecretId
+        AutomaticallyAfterDays: 1
+        Duration: 1h
+  RDBSecretsAttachment:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/secrets_manager/target_attachment.yml'
+      Parameters:
+        SecretId: !GetAtt RDBSecrets.Outputs.SecretId
+        TargetId: !GetAtt ResourceDBCluster.Outputs.DBClusterId

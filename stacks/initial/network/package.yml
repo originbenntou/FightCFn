@@ -13,7 +13,7 @@ Resources:
   VPC:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/abce44712e1428720bcce5a496398471.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/abce44712e1428720bcce5a496398471.template
       Parameters:
         CidrBlock: 10.1.0.0/16
         ProductName:
@@ -25,7 +25,7 @@ Resources:
   PublicSubnetA:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -42,7 +42,7 @@ Resources:
   PublicSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -59,7 +59,7 @@ Resources:
   PrivateSubnetA:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -76,7 +76,7 @@ Resources:
   PrivateSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -93,7 +93,7 @@ Resources:
   PrivateSubnetAForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -110,7 +110,7 @@ Resources:
   PrivateSubnetCForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -127,7 +127,7 @@ Resources:
   PublicSubnetAForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -144,7 +144,7 @@ Resources:
   PublicSubnetCForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -161,7 +161,7 @@ Resources:
   PrivateSubnetAForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -178,7 +178,7 @@ Resources:
   PrivateSubnetCForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/58522c022c5bda06695b2b6418c62347.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/58522c022c5bda06695b2b6418c62347.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -217,7 +217,7 @@ Resources:
   PublicRouteTable:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/843d3694e89bdf405398c2f338273784.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/843d3694e89bdf405398c2f338273784.template
       Parameters:
         VPC:
           Fn::GetAtt:
@@ -232,7 +232,7 @@ Resources:
   PublicRoute:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/30f3cea1220ce60a41c53ca8e5f3d32f.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/30f3cea1220ce60a41c53ca8e5f3d32f.template
       Parameters:
         RouteTableId:
           Fn::GetAtt:
@@ -244,7 +244,7 @@ Resources:
   PublicSubnetARouteTableAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/9faaf1b362a9c4d938f2b9f67342040b.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/9faaf1b362a9c4d938f2b9f67342040b.template
       Parameters:
         SubnetId:
           Fn::GetAtt:
@@ -257,7 +257,7 @@ Resources:
   PublicSubnetCRouteTableAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/network/9faaf1b362a9c4d938f2b9f67342040b.template
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/cfn-template-myproduct-dev/initial-network/9faaf1b362a9c4d938f2b9f67342040b.template
       Parameters:
         SubnetId:
           Fn::GetAtt:

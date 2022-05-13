@@ -9,21 +9,19 @@ Parameters:
       - dev
       - stg
       - prd
-
   Name:
     Type: String
 
+  SubnetIds:
+    Type: CommaDelimitedList
+
 Resources:
-  Secret:
-    Type: AWS::SecretsManager::Secret
-    DeletionPolicy: Retain
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
     Properties:
-      Name: !Ref Name
-      GenerateSecretString:
-        SecretStringTemplate: '{"username": "admin"}'
-        GenerateStringKey: "password"
-        PasswordLength: 16
-        ExcludeCharacters: '"@/\'
+      DBSubnetGroupDescription: !Ref AWS::StackName
+      DBSubnetGroupName: !Sub ${Name}-db-subnet-group
+      SubnetIds: !Ref SubnetIds
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName
@@ -31,3 +29,7 @@ Resources:
           Value: !Ref Env
         - Key: 'Name'
           Value: !Ref Name
+
+Outputs:
+  DBSubnetGroupId:
+    Value: !Ref DBSubnetGroup

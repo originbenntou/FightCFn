@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  SecretId:
+    Type: String
+  TargetId:
+    Type: String
+
+Resources:
+  Secret:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    DeletionPolicy: Delete # FIXME
+    Properties:
+      SecretId: !Ref SecretId
+      TargetId: !Ref TargetId
+      TargetType: AWS::RDS::DBCluster
