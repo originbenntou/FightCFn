@@ -36,6 +36,16 @@ Resources:
         ProductName: !Ref ProductName
         Env: !Ref Env
         Name: !Sub ${ProductName}-resource-db-${Env}
+  ResourceDBInstanceA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/rds/instance.yml'
+      Parameters:
+        DBClusterId: !GetAtt ResourceDBCluster.Outputs.DBClusterId
+        DBSubnetGroupName: !GetAtt DBSubnetGroup.Outputs.DBSubnetGroupId
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-resource-db-${Env}
 
   #########################################
   # Secrets Manager（RDB）
