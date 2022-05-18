@@ -86,4 +86,4 @@ Outputs:
   RDBSecrets:
     Value: !GetAtt RDBSecrets.Outputs.SecretId
     Export:
-      Name RDBSecrets
+      Name: RDBSecrets

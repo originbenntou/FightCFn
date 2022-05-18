@@ -1,6 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  ECSCluster,Service,Task,LoadBalancer,SecurityGroup
 
 Parameters:
   ProductName:

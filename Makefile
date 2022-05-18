@@ -5,6 +5,10 @@ aws_region?=ap-northeast-1
 product_name?=myproduct
 env?=dev
 pwd=$(shell pwd)
+frontend_repo?=
+frontend_image?=
+backend_repo?=
+backend_image?=
 
 cfn_template_bucket?=cfn-template-$(product_name)-$(env)
 

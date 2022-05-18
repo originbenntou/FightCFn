@@ -24,6 +24,7 @@ Resources:
       ConnectionType: CONNECT_SSH
       Description: !Ref Name
       InstanceType: 't2.micro'
+      Name: !Ref Name
       SubnetId: !Ref SubnetId
       Tags:
         - Key: 'ProductName'

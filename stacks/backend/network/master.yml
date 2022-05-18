@@ -290,7 +290,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 6
-      HealthCheckPath: '/'
+      HealthCheckPath: '/health' # FIXME: アプリケーションに応じて
       HealthCheckPort: 8080
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
@@ -424,6 +424,7 @@ Resources:
       Parameters:
         ServiceName: 'com.amazonaws.ap-northeast-1.secretsmanager'
         VpcEndpointType: Interface
+        PrivateDnsEnabled: true
         VpcId: !ImportValue VPC
         SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
         SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
