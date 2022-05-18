@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+Resources:
+  Cloud9ForDBOperation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/cloud9/environment_ec2.yml'
+      Parameters:
+        SubnetId: !ImportValue PublicSubnetAForCloud9
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-cloud9-${Env}

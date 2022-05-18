@@ -22,6 +22,10 @@ Parameters:
     Type: Number
   ExecutionRoleArn:
     Type: String
+  TaskRoleArn:
+    Type: String
+  DBSecret:
+    Type: String
 
 Resources:
   TaskDefinition:
@@ -35,7 +39,7 @@ Resources:
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn: !Ref ExecutionRoleArn
-      TaskRoleArn: !Ref AWS::NoValue
+      TaskRoleArn: !Ref TaskRoleArn
       ContainerDefinitions:
         - Name: !Ref ProductName # コンテナ名
           Cpu: !Ref ContainerCpu
@@ -43,6 +47,15 @@ Resources:
           Image: !Ref ImageUrl
           PortMappings:
             - ContainerPort: !Ref ContainerPort
+          Secrets:
+            - Name: DB_HOST
+              ValueFrom: !Join ['', [ !Ref DBSecret, ':host::' ]]
+            - Name: DB_PORT
+              ValueFrom: !Join ['', [ !Ref DBSecret, ':port::' ]]
+            - Name: DB_USER
+              ValueFrom: !Join ['', [ !Ref DBSecret, ':username::' ]]
+            - Name: DB_PASS
+              ValueFrom: !Join ['', [ !Ref DBSecret, ':password::' ]]
           # FIXME
           # LogConfiguration:
           #   LogDriver: awslogs

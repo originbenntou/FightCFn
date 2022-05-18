@@ -49,6 +49,7 @@ Resources:
         - ContainerName: !Ref ProductName # コンテナ名
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroupArn
+      EnableExecuteCommand: true
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName

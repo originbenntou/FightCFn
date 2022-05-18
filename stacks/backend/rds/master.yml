@@ -1,6 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  ECSCluster,Service,Task,LoadBalancer,SecurityGroup
 
 Parameters:
   ProductName:
@@ -35,7 +33,7 @@ Resources:
         DBSecret: !GetAtt RDBSecrets.Outputs.SecretId
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-resource-db-${Env}
+        Name: !Sub ${ProductName}-resource-db-cluster-${Env}
   ResourceDBInstanceA:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -45,10 +43,20 @@ Resources:
         DBSubnetGroupName: !GetAtt DBSubnetGroup.Outputs.DBSubnetGroupId
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-resource-db-${Env}
+        Name: !Sub ${ProductName}-resource-db-a-${Env}
+  ResourceDBInstanceC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/rds/instance.yml'
+      Parameters:
+        DBClusterId: !GetAtt ResourceDBCluster.Outputs.DBClusterId
+        DBSubnetGroupName: !GetAtt DBSubnetGroup.Outputs.DBSubnetGroupId
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-resource-db-c-${Env}
 
   #########################################
-  # Secrets Manager（RDB）
+  # Secrets Manager（ResourceDB）
   #########################################
   RDBSecrets:
     Type: AWS::CloudFormation::Stack
@@ -57,14 +65,14 @@ Resources:
       Parameters:
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-rdb1-${Env}
+        Name: !Sub ${ProductName}-resource-db-${Env}
   RDBSecretsRotate:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/secrets_manager/rotation_schedule.yml'
       Parameters:
         SecretId: !GetAtt RDBSecrets.Outputs.SecretId
-        AutomaticallyAfterDays: 1
+        AutomaticallyAfterDays: 1 # FIXME
         Duration: 1h
   RDBSecretsAttachment:
     Type: AWS::CloudFormation::Stack
@@ -73,3 +81,9 @@ Resources:
       Parameters:
         SecretId: !GetAtt RDBSecrets.Outputs.SecretId
         TargetId: !GetAtt ResourceDBCluster.Outputs.DBClusterId
+
+Outputs:
+  RDBSecrets:
+    Value: !GetAtt RDBSecrets.Outputs.SecretId
+    Export:
+      Name RDBSecrets

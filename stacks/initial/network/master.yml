@@ -195,6 +195,20 @@ Resources:
       Parameters:
         SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
         RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
+  PublicSubnetAForCloud9RouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !GetAtt PublicSubnetAForCloud9.Outputs.SubnetId
+        RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
+  PublicSubnetCForCloud9RouteTableAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !GetAtt PublicSubnetCForCloud9.Outputs.SubnetId
+        RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
 
 Outputs:
   VPC:
@@ -229,7 +243,7 @@ Outputs:
     Value: !GetAtt PublicSubnetAForCloud9.Outputs.SubnetId
     Export:
       Name: PublicSubnetAForCloud9
-  PublicSubnetCForCloud9:
+  PublicSubnetCForCloud9: # AZ-a障害時の予備
     Value: !GetAtt PublicSubnetCForCloud9.Outputs.SubnetId
     Export:
       Name: PublicSubnetCForCloud9

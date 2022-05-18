@@ -26,10 +26,10 @@ Resources:
       AutoMinorVersionUpgrade: false
       CopyTagsToSnapshot: true
       DBClusterIdentifier: !Ref DBClusterId
-      DBInstanceClass: 'db.t2.small'
+      DBInstanceClass: 'db.t3.medium'
       DBParameterGroupName: !Ref DBParameterGroup
       DBSubnetGroupName: !Ref DBSubnetGroupName
-      Engine: '8.0.mysql_aurora.3.02.0'
+      Engine: 'aurora-mysql'
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName
@@ -43,17 +43,6 @@ Resources:
     Properties:
       Description: !Ref AWS::StackName
       Family: 'aurora-mysql8.0'
-      Parameters:
-          character_set_client: utf8mb4
-          character_set_connection: utf8mb4
-          character_set_database: utf8mb4
-          character_set_results: utf8mb4
-          character_set_filesystem: utf8mb4
-          character_set_server: utf8mb4
-          collation_connection: utf8mb4_bin
-          collation_server: utf8mb4_bin
-          skip-character-set-client-handshake: 1
-          time_zone: Asia/Tokyo
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName

@@ -1,6 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  ECSCluster,Service,Task,LoadBalancer,SecurityGroup
 
 Parameters:
   ProductName:
@@ -419,7 +417,40 @@ Resources:
         SubnetIds: ''
         SecurityGroupIds: ''
         RouteTableIds: !Join [ ',', [ !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable ] ]
+  VPCEndpointSecrets:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.secretsmanager'
+        VpcEndpointType: Interface
+        VpcId: !ImportValue VPC
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
+        SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
+        RouteTableIds: ''
 
+  #########################################
+  # Security Group For Cloud9
+  # DBのSGの送信元として使用
+  # Cloud9のCFnだと自動でこのSGをアタッチできないため手動でアタッチする必要あり
+  #########################################
+  Cloud9SecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub cloud9-sg-${Env}
+  Cloud9SecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/egress.yml'
+      Parameters:
+        GroupId: !GetAtt Cloud9SecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        IpProtocol: -1
 
   #########################################
   # RouteTable For Database
@@ -461,7 +492,7 @@ Resources:
         ProductName: !Ref ProductName
         Env: !Ref Env
         Name: !Sub db-sg-${Env}
-  DBSecurityGroupIngress:
+  DBSecurityGroupIngressFromECS:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
@@ -471,7 +502,16 @@ Resources:
         ToPort: 3306
         GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
         SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
-  # DBSecurityGroupIngress: FIXME: Cloud9からも疎通させる
+  DBSecurityGroupIngressFromCloud9:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt Cloud9SecurityGroup.Outputs.SecurityGroupId
   DBSecurityGroupEgress:
     Type: AWS::CloudFormation::Stack
     Properties:

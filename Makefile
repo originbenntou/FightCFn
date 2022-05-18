@@ -8,14 +8,18 @@ pwd=$(shell pwd)
 
 cfn_template_bucket?=cfn-template-$(product_name)-$(env)
 
-.PHONY: package-% deploy-% create_cfn_template_bucket
+.PHONY: all-% package-% deploy-% create_cfn_template_bucket
 
-pkg-%:
+all-%:
+	package-$*
+	deploy-$*
+
+package-%:
 	$(call _cfn_validate,$*)
 	@echo "\n"
 	$(call _cfn_package,$*)
 
-dep-%:
+deploy-%:
 	$(call _cfn_deploy,$*)
 
 define _cfn_validate
@@ -36,6 +40,7 @@ define _cfn_package
 		--region $(aws_region)
 endef
 
+# FIXME: disable-rollbackを外す、no-execute-changesetをつける、parameter-overrideをやめる
 define _cfn_deploy
 	aws cloudformation deploy \
 		--template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/package.yml \
@@ -43,6 +48,7 @@ define _cfn_deploy
 		--stack-name $(product_name)-$1-$(env) \
 		--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
 		--no-fail-on-empty-changeset \
+		--disable-rolleback \
 		--profile $(aws_profile) \
 		--region $(aws_region)
 endef
