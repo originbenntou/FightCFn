@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  #########################################
+  # For ECS
+  #########################################
+  ContainerPort:
+    Type: Number
+    Default: 8080
+  Path:
+    Type: String
+    Default: '*'
+  Priority:
+    Type: Number
+    Default: 1
+  ImageUrl:
+    Type: String
+    Default: '743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight'
+  ContainerCpu:
+    Type: Number
+    Default: 256
+  ContainerMemory:
+    Type: Number
+    Default: 512
+  DesiredCount:
+    Type: Number
+    Default: 2
+
+Resources:
+  #########################################
+  # Public Load Balancer
+  #########################################
+  PublicLoadBalancer:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/ec2/load_balancer.yml'
+      Parameters:
+        Scheme: 'internet-facing'
+        Subnets: !Join [ ',', [!ImportValue PublicSubnetA, !ImportValue PublicSubnetC] ]
+        SecurityGroups: !Join [ ',', [!GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId] ]
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub public-lb-${Env}
+
+  #########################################
+  # TargetGroup For Public ALB
+  #########################################
+  DefaultTargetGroupForPublicALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/ec2/target_group.yml'
+      Parameters:
+        VpcId: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub default-tg-for-public-alb-${Env}
+  DefaultTargetGroupListenerForPublicALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/ec2/target_group_listener.yml'
+      Parameters:
+        TargetGroupArn: !GetAtt DefaultTargetGroupForPublicALB.Outputs.TargetGroupArn
+        LoadBalancerArn: !GetAtt PublicLoadBalancer.Outputs.LoadBalancerArn
+
+  #########################################
+  # TargetGroup To ECS
+  # FIXME: nested stackに！
+  #########################################
+  TargetGroupForECS:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: '/health' # FIXME: アプリケーションに応じて
+      HealthCheckPort: 8080
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name: !Sub tg-for-ecs-${Env}
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !ImportValue VPC
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+        - Key: 'Name'
+          Value: !Sub tg-for-ecs-${Env}
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroupForECS
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref Path]
+      ListenerArn: !GetAtt DefaultTargetGroupListenerForPublicALB.Outputs.TargetGroupListener
+      Priority: !Ref Priority
+
+  #########################################
+  # Private Load Balancer
+  #########################################
+  #  PrivateLoadBalancer:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/ec2/load_balancer.yml'
+  #      Parameters:
+  #        Scheme: 'internal'
+  #        Subnets: !Join [ ',', [!ImportValue PrivateSubnetA, !ImportValue PrivateSubnetC] ]
+  #        SecurityGroups: !Join [ ',', [!GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId] ]
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+
+  #########################################
+  # TargetGroup For Private ALB
+  #########################################
+  #  DefaultTargetGroupForPrivateALB:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/ec2/target_group.yml'
+  #      Parameters:
+  #        VpcId: !ImportValue VPC
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #        Name: !Sub ${ProductName}-${Env}-default-tg-for-private-alb
+  #  DefaultTargetGroupListenerForPrivateALB:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/ec2/target_group_listener.yml'
+  #      Parameters:
+  #        TargetGroupArn: !GetAtt DefaultTargetGroupForPrivateALB.Outputs.TargetGroupArn
+  #        LoadBalancerArn: !GetAtt PrivateLoadBalancer.Outputs.LoadBalancerArn
+
+  #########################################
+  # ECS Cluster
+  #########################################
+  ECSCluster:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/ecs/cluster.yml'
+      Parameters:
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-cluster-${Env}
+
+  #########################################
+  # ECS Task
+  #########################################
+  ECSTask:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/ecs/task.yml'
+      Parameters:
+        ContainerCpu: !Ref ContainerCpu
+        ContainerMemory: !Ref ContainerMemory
+        ImageUrl: !Ref ImageUrl
+        ContainerPort: !Ref ContainerPort
+        ExecutionRoleArn: !ImportValue ECSTaskExecutionRole
+        TaskRoleArn: !ImportValue ECSTaskRole
+        DBSecret: !ImportValue RDBSecrets
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-taskdef-${Env}
+
+  #########################################
+  # ECS Service
+  #########################################
+  ECSService:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - ECSCluster
+      - ECSTask
+    Properties:
+      TemplateURL: '../../../templates/ecs/service.yml'
+      Parameters:
+        ClusterArn: !GetAtt ECSCluster.Outputs.ECSClusterArn
+        DesiredCount: !Ref DesiredCount
+        SecurityGroups: !Join [ ',', [!ImportValue ECSContainerSecurityGroup] ]
+        Subnets: !Join [ ',', [!ImportValue PrivateSubnetA, !ImportValue PrivateSubnetC] ]
+        TaskDefinitionArn: !GetAtt ECSTask.Outputs.TaskDefinitionArn
+        ContainerPort: !Ref ContainerPort
+        TargetGroupArn: !ImportValue TargetGroupForECS
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-service-${Env}
+
+Outputs:
+  PublicLoadBalancerDnsName:
+    Value: !GetAtt PublicLoadBalancer.Outputs.LoadBalancerDnsName
+  TargetGroupForECS:
+    Value: !Ref TargetGroupForECS
+    Export:
+      Name: TargetGroupForECS

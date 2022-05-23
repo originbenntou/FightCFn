@@ -1,0 +1,339 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+Resources:
+  #########################################
+  # Security Group For Public LB
+  #########################################
+  PublicLoadBalancerSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub public-lb-sg-${Env}
+  PublicALBSecurityGroupIngressFromIGWIPv4:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_gw.yml'
+      Parameters:
+        GroupId: !GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        CidrIpv6: ''
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 8080
+  PublicALBSecurityGroupIngressFromIGWIPv6:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_gw.yml'
+      Parameters:
+        GroupId: !GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+        CidrIp: ''
+        CidrIpv6: '::/0'
+        IpProtocol: tcp
+        FromPort: 80
+        ToPort: 8080
+  # もしかしてEgressは勝手にできてる？
+  #  PublicALBSecurityGroupEgressToIGW:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/egress.yml'
+  #      Parameters:
+  #        GroupId: !GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+  #        CidrIp: '0.0.0.0/0'
+  #        IpProtocol: -1
+
+  #########################################
+  # Security Group For Private LB
+  #########################################
+  #  PrivateLoadBalancerSecurityGroup:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/security_group.yml'
+  #      Parameters:
+  #        VPC: !ImportValue VPC
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #        Name: !Sub ${ProductName}-${Env}-private-lb-sg
+  #  PrivateALBSecurityGroupIngressFromECS:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+  #      Parameters:
+  #        IpProtocol: '-1'
+  #        FromPort: ''
+  #        ToPort: ''
+  #        GroupId: !GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+  #        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+
+  #########################################
+  # Security Group For ECS
+  #########################################
+  ECSContainerSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ecs-container-sg-${Env}
+  ECSSecurityGroupIngressFromPublicALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: '-1'
+        FromPort: ''
+        ToPort: ''
+        GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+  ECSSecurityGroupIngressFromSelf:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: '-1'
+        FromPort: ''
+        ToPort: ''
+        GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+  # NatGateway→PrivateALBを消しているので、これも不要
+  #  ECSSecurityGroupIngressFromPrivateALB:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+  #      Parameters:
+  #        IpProtocol: '-1'
+  #        FromPort: ''
+  #        ToPort: ''
+  #        GroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+  #        SourceSecurityGroupId: !GetAtt PrivateLoadBalancerSecurityGroup.Outputs.SecurityGroupId
+
+  #########################################
+  # Security Group For DB
+  #########################################
+  DBSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub db-sg-${Env}
+  DBSecurityGroupIngressFromECS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+  DBSecurityGroupIngressFromCloud9:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt Cloud9SecurityGroup.Outputs.SecurityGroupId
+  DBSecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/egress.yml'
+      Parameters:
+        GroupId: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        IpProtocol: -1
+
+  #########################################
+  # Security Group For Cloud9
+  # DBのSGの送信元として使用
+  # Cloud9のCFnだと自動でこのSGをアタッチできないため手動でアタッチする必要あり
+  #########################################
+  Cloud9SecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub cloud9-sg-${Env}
+  Cloud9SecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/egress.yml'
+      Parameters:
+        GroupId: !GetAtt Cloud9SecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        IpProtocol: -1
+
+  #########################################
+  # Security Group For VPCEndpoint
+  #########################################
+  VPCEndpointSecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/security_group.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub vpcendpoint-sg-${Env}
+  VPCEndpointSecurityGroupIngress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/ingress_from_sg.yml'
+      Parameters:
+        IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        GroupId: !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId
+        SourceSecurityGroupId: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+  VPCEndpointSecurityGroupEgress:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/egress.yml'
+      Parameters:
+        GroupId: !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId
+        CidrIp: '0.0.0.0/0'
+        IpProtocol: -1
+
+  #########################################
+  # VPCEndpoint
+  #########################################
+  VPCEndpointECRApi:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.ecr.api'
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+        VpcId: !ImportValue VPC
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
+        SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
+        RouteTableIds: ''
+  VPCEndpointECRDkr:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.ecr.dkr'
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+        VpcId: !ImportValue VPC
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
+        SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
+        RouteTableIds: ''
+  VPCEndpointSecrets:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.secretsmanager'
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+        VpcId: !ImportValue VPC
+        SubnetIds: !Join [ ',', [!ImportValue PrivateSubnetAForVPCEndpoint, !ImportValue PrivateSubnetCForVPCEndpoint] ]
+        SecurityGroupIds: !Join [ ',', [ !GetAtt VPCEndpointSecurityGroup.Outputs.SecurityGroupId ] ]
+        RouteTableIds: ''
+  VPCEndpointS3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/vpc_endpoint.yml'
+      Parameters:
+        ServiceName: 'com.amazonaws.ap-northeast-1.s3'
+        VpcEndpointType: Gateway
+        VpcId: !ImportValue VPC
+        SubnetIds: ''
+        SecurityGroupIds: ''
+        RouteTableIds: !Join [ ',', [ !ImportValue RouteTableForECSVPCEndpoint ] ]
+
+  #########################################
+  # IAM For ECS
+  #########################################
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskExecutionRolePolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  # Allow the ECS Tasks to download images from ECR
+                  - 'ecr:GetAuthorizationToken'
+                  - 'ecr:BatchCheckLayerAvailability'
+                  - 'ecr:GetDownloadUrlForLayer'
+                  - 'ecr:BatchGetImage'
+                  # Allow the ECS task to get secrets
+                  - 'secretsmanager:GetSecretValue'
+                  # Allow the ECS tasks to upload logs to CloudWatch
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskRolePolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssmmessages:CreateControlChannel'
+                  - 'ssmmessages:CreateDataChannel'
+                  - 'ssmmessages:OpenControlChannel'
+                  - 'ssmmessages:OpenDataChannel'
+                Resource: '*'
+
+Outputs:
+  ECSContainerSecurityGroup:
+    Value: !GetAtt ECSContainerSecurityGroup.Outputs.SecurityGroupId
+    Export:
+      Name: ECSContainerSecurityGroup
+  DBSecurityGroup:
+    Value: !GetAtt DBSecurityGroup.Outputs.SecurityGroupId
+    Export:
+      Name: DBSecurityGroup
+  ECSTaskExecutionRole:
+    Value: !Ref ECSTaskExecutionRole
+    Export:
+      Name: ECSTaskExecutionRole
+  ECSTaskRole:
+    Value: !Ref ECSTaskRole
+    Export:
+      Name: ECSTaskRole

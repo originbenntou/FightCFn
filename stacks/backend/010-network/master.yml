@@ -1,9 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  VPC,Subnet,NATGateway,RouteTable
 
 # Lowercase letters
 Parameters:
+  #########################################
+  # For Global
+  #########################################
   ProductName:
     Type: String
   Env:
@@ -162,7 +163,7 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
 
   #########################################
-  # PublicRouteTable
+  # RouteTable For PublicSubnet（IGW）
   #########################################
   PublicRouteTable:
     Type: AWS::CloudFormation::Stack
@@ -210,6 +211,139 @@ Resources:
         SubnetId: !GetAtt PublicSubnetCForCloud9.Outputs.SubnetId
         RouteTableId: !GetAtt PublicRouteTable.Outputs.RouteTable
 
+  #########################################
+  # RouteTable For ECS VPCEndpoint（Gateway）
+  # TODO: このルートテーブルどうなってるか見ておく
+  #########################################
+  RouteTableForECSVPCEndpoint:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub route-table-for-ecs-vpcendpoint-${Env}
+  PrivateSubnetARouteTableForECSVPCEndpointAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetA
+        RouteTableId: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
+  PrivateSubnetCRouteTableForECSVPCEndpointAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetC
+        RouteTableId: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
+
+  #########################################
+  # RouteTable For Database
+  # TODO: このルートテーブルどうなってるか見ておく
+  #########################################
+  RouteTableForDB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table.yml'
+      Parameters:
+        VPC: !ImportValue VPC
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub route-table-for-db-${Env}
+  PrivateSubnetARouteTableForDBAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetAForDB
+        RouteTableId: !GetAtt RouteTableForDB.Outputs.RouteTable
+  PrivateSubnetCRouteTableForDBAssociation:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/vpc/route_table_associate.yml'
+      Parameters:
+        SubnetId: !ImportValue PrivateSubnetCForDB
+        RouteTableId: !GetAtt RouteTableForDB.Outputs.RouteTable
+
+  #########################################
+  # NATGateway
+  # EIPでPrivateSubnet内のリソースにアクセスする用
+  # PrivateSubnetへの通信はALBのみに制限するのが、よりセキュア 特に用がないなら削除推奨
+  # NatGatewayは取り外し
+  #########################################
+  #  NatGatewayA:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/nat_gateway.yml'
+  #      Parameters:
+  #        SubnetId: !GetAtt PublicSubnetA.Outputs.SubnetId
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #  NatGatewayC:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/nat_gateway.yml'
+  #      Parameters:
+  #        SubnetId: !GetAtt PublicSubnetC.Outputs.SubnetId
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+
+  #########################################
+  # PrivateRouteTable
+  # NatGateway取り外し
+  # route tableってAとCで2ついるっけ...？
+  #########################################
+  #  PrivateRouteTableA:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/route_table.yml'
+  #      Parameters:
+  #        VPC: !GetAtt VPC.Outputs.VpcId
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #        Name: !Sub ${ProductName}-${Env}-private-route-table-a
+  #  PrivateRouteA:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/route.yml'
+  #      Parameters:
+  #        RouteTableId: PrivateRouteTableA.Outputs.RouteTable
+  #        GatewayId: ''
+  #        NatGatewayId: !GetAtt NatGatewayA.Outputs.NatGateway
+  #  PrivateSubnetARouteTableAssociation:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+  #      Parameters:
+  #        SubnetId: !GetAtt PrivateSubnetA.Outputs.SubnetId
+  #        RouteTableId: !GetAtt PrivateRouteTableA.Outputs.RouteTable
+  #  PrivateRouteTableC:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/route_table.yml'
+  #      Parameters:
+  #        VPC: !GetAtt VPC.Outputs.VpcId
+  #        ProductName: !Ref ProductName
+  #        Env: !Ref Env
+  #        Name: !Sub ${ProductName}-${Env}-private-route-table-a
+  #  PrivateRouteC:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/route.yml'
+  #      Parameters:
+  #        RouteTableId: PrivateRouteTableA.Outputs.RouteTable
+  #        GatewayId: ''
+  #        NatGatewayId: !GetAtt NatGatewayC.Outputs.NatGateway
+  #  PrivateSubnetCRouteTableAssociation:
+  #    Type: AWS::CloudFormation::Stack
+  #    Properties:
+  #      TemplateURL: '../../templates/vpc/route_table_associate.yml'
+  #      Parameters:
+  #        SubnetId: !GetAtt PrivateSubnetC.Outputs.SubnetId
+  #        RouteTableId: !GetAtt PrivateRouteTableC.Outputs.RouteTable
+
 Outputs:
   VPC:
     Value: !GetAtt VPC.Outputs.VpcId
@@ -255,3 +389,7 @@ Outputs:
     Value: !GetAtt PrivateSubnetCForVPCEndpoint.Outputs.SubnetId
     Export:
       Name: PrivateSubnetCForVPCEndpoint
+  RouteTableForECSVPCEndpoint:
+    Value: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
+    Export:
+      Name: RouteTableForECSVPCEndpoint

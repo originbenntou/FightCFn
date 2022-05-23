@@ -1,34 +1,45 @@
+.PHONY: $(shell egrep -o ^[a-zA-Z_-]+: $(MAKEFILE_LIST) | sed 's/://')
+
 aws_profile:=${AWS_PROFILE}
 aws_region?=ap-northeast-1
 
 # TODO: 要変更
 product_name?=myproduct
 env?=dev
-pwd=$(shell pwd)
-frontend_repo?=
+
+frontend_repo?=$(product_name)-frontend
+backend_repo?=$(product_name)-backend
+infra_repo?=$(product_name)-infra
+
+# TODO: 要変更
 frontend_image?=
-backend_repo?=
 backend_image?=
 
-cfn_template_bucket?=cfn-template-$(product_name)-$(env)
+template_bucket?=template-$(product_name)-$(env)
 
-.PHONY: all-% package-% deploy-% create_cfn_template_bucket
+target?=
 
-all-%:
-	package-$*
-	deploy-$*
+cmd: validate
+	echo $(target)
 
-package-%:
-	$(call _cfn_validate,$*)
+validate:
+	ifndef $(target)
+		$(error target is not set)
+	else
+		$(error aaaaaa is not set)
+	endif
+
+package:
+	$(call _cfn_validate,$target)
 	@echo "\n"
-	$(call _cfn_package,$*)
+	$(call _cfn_package,$target)
 
-deploy-%:
+deploy:
 	$(call _cfn_deploy,$*)
 
 define _cfn_validate
 	aws cloudformation validate-template \
-		--template-body file://$(pwd)/stacks/$(shell echo $1 |  sed -e 's/-/\//g')/master.yml \
+		--template-body file://$(shell pwd)/stacks/$1/master.yml \
 		--output text \
 		--profile $(aws_profile) \
 		--region $(aws_region)
@@ -36,10 +47,10 @@ endef
 
 define _cfn_package
 	aws cloudformation package \
-		--template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/master.yml \
+		--template-file ./stacks/$1/master.yml \
 		--s3-bucket $(cfn_template_bucket) \
 		--s3-prefix $1\
-		--output-template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/package.yml \
+		--output-template-file ./stacks/$1/package.yml \
 		--profile $(aws_profile) \
 		--region $(aws_region)
 endef
@@ -57,7 +68,7 @@ define _cfn_deploy
 		--region $(aws_region)
 endef
 
-create_cfn_template_bucket:
+create_template_bucket:
 	aws cloudformation deploy \
 		--template-file ./template_bucket.yml \
 		--parameter-overrides ProductName=$(product_name) Env=$(env) BucketName=$(cfn_template_bucket) \
