@@ -34,3 +34,5 @@ Resources:
 Outputs:
   VpcId:
     Value: !Ref VPC
+  CidrBlock:
+    Value: !GetAtt VPC.CidrBlock
