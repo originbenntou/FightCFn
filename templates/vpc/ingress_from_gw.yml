@@ -7,8 +7,6 @@ Parameters:
     Type: String
   CidrIpv6:
     Type: String
-  IpProtocol:
-    Type: String
   FromPort:
     Type: String
   ToPort:
@@ -19,17 +17,30 @@ Conditions:
   isEmptyCidrIpv6: !Equals [ !Ref CidrIpv6, '' ]
 
 Resources:
-  SecurityGroupIngress:
+  # IPv4かIPv6のいずれかしか単一でしか指定できない
+  SecurityGroupIngressCidrIp:
+    Condition: isEmptyCidrIpv6
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: !Ref AWS::StackName
       GroupId: !Ref GroupId
-      CidrIp: !If [ isEmptyCidrIp, !Ref AWS::NoValue, !Ref CidrIp ]
-      CidrIpv6: !If [ isEmptyCidrIpv6, !Ref AWS::NoValue, !Ref CidrIpv6 ]
+      CidrIp: !Ref CidrIp
+      IpProtocol: tcp
+      FromPort: !Ref FromPort
+      ToPort: !Ref ToPort
+  SecurityGroupIngressCidrIpv6:
+    Condition: isEmptyCidrIp
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: !Ref AWS::StackName
+      GroupId: !Ref GroupId
+      CidrIpv6: !Ref CidrIpv6
       IpProtocol: tcp
       FromPort: !Ref FromPort
       ToPort: !Ref ToPort
 
 Outputs:
-  SecurityGroupIngress:
-    Value: !Ref SecurityGroupIngress
+  SecurityGroupIngressCidrIp:
+    Value: !Ref SecurityGroupIngressCidrIp
+  SecurityGroupIngressCidrIpv6:
+    Value: !Ref SecurityGroupIngressCidrIpv6

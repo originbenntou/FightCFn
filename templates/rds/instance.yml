@@ -24,7 +24,7 @@ Resources:
     Properties:
       AllowMajorVersionUpgrade: false
       AutoMinorVersionUpgrade: false
-      CopyTagsToSnapshot: true
+      # CopyTagsToSnapshot: true
       DBClusterIdentifier: !Ref DBClusterId
       DBInstanceClass: 'db.t3.medium'
       DBParameterGroupName: !Ref DBParameterGroup

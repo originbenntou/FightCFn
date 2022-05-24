@@ -26,7 +26,7 @@ Resources:
         CidrBlock: '10.1.0.0/16'
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub vpc-${Env}
+        Name: !Sub ${ProductName}-vpc-${Env}
 
   #########################################
   # Subnet
@@ -41,7 +41,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub public-subnet-a-${Env}
+        Name: !Sub ${ProductName}-public-subnet-a-${Env}
   PublicSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -52,7 +52,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub public-subnet-c-${Env}
+        Name: !Sub ${ProductName}-public-subnet-c-${Env}
   PrivateSubnetA:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -63,7 +63,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-a-${Env}
+        Name: !Sub ${ProductName}-private-subnet-a-${Env}
   PrivateSubnetC:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -74,7 +74,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-c-${Env}
+        Name: !Sub ${ProductName}-private-subnet-c-${Env}
   PrivateSubnetAForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -85,7 +85,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-a-db-${Env}
+        Name: !Sub ${ProductName}-private-subnet-a-db-${Env}
   PrivateSubnetCForDB:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -96,7 +96,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-c-db-${Env}
+        Name: !Sub ${ProductName}-private-subnet-c-db-${Env}
   PublicSubnetAForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -107,7 +107,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-a-cloud9-${Env}
+        Name: !Sub ${ProductName}-private-subnet-a-cloud9-${Env}
   PublicSubnetCForCloud9:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -118,7 +118,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-a-cloud9-${Env}
+        Name: !Sub ${ProductName}-private-subnet-a-cloud9-${Env}
   PrivateSubnetAForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -129,7 +129,7 @@ Resources:
         AZ: 0
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-a-vpcendpoint-${Env}
+        Name: !Sub ${ProductName}-private-subnet-a-vpcendpoint-${Env}
   PrivateSubnetCForVPCEndpoint:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -140,7 +140,7 @@ Resources:
         AZ: 1
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub private-subnet-c-vpcendpoint-${Env}
+        Name: !Sub ${ProductName}-private-subnet-c-vpcendpoint-${Env}
 
   #########################################
   # InternetGateway
@@ -173,7 +173,7 @@ Resources:
         VPC: !GetAtt VPC.Outputs.VpcId
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub public-route-table-${Env}
+        Name: !Sub ${ProductName}-public-route-table-${Env}
   PublicRoute:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -220,23 +220,23 @@ Resources:
     Properties:
       TemplateURL: '../../../templates/vpc/route_table.yml'
       Parameters:
-        VPC: !ImportValue VPC
+        VPC: !GetAtt VPC.Outputs.VpcId
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub route-table-for-ecs-vpcendpoint-${Env}
+        Name: !Sub ${ProductName}-route-table-for-ecs-vpcendpoint-${Env}
   PrivateSubnetARouteTableForECSVPCEndpointAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !ImportValue PrivateSubnetA
+        SubnetId: !GetAtt PrivateSubnetA.Outputs.SubnetId
         RouteTableId: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
   PrivateSubnetCRouteTableForECSVPCEndpointAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !ImportValue PrivateSubnetC
+        SubnetId: !GetAtt PrivateSubnetC.Outputs.SubnetId
         RouteTableId: !GetAtt RouteTableForECSVPCEndpoint.Outputs.RouteTable
 
   #########################################
@@ -248,23 +248,23 @@ Resources:
     Properties:
       TemplateURL: '../../../templates/vpc/route_table.yml'
       Parameters:
-        VPC: !ImportValue VPC
+        VPC: !GetAtt VPC.Outputs.VpcId
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub route-table-for-db-${Env}
+        Name: !Sub ${ProductName}-route-table-for-db-${Env}
   PrivateSubnetARouteTableForDBAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !ImportValue PrivateSubnetAForDB
+        SubnetId: !GetAtt PrivateSubnetAForDB.Outputs.SubnetId
         RouteTableId: !GetAtt RouteTableForDB.Outputs.RouteTable
   PrivateSubnetCRouteTableForDBAssociation:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../templates/vpc/route_table_associate.yml'
       Parameters:
-        SubnetId: !ImportValue PrivateSubnetCForDB
+        SubnetId: !GetAtt PrivateSubnetCForDB.Outputs.SubnetId
         RouteTableId: !GetAtt RouteTableForDB.Outputs.RouteTable
 
   #########################################

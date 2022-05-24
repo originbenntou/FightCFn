@@ -1,5 +1,3 @@
-.PHONY: $(shell egrep -o ^[a-zA-Z_-]+: $(MAKEFILE_LIST) | sed 's/://')
-
 aws_profile:=${AWS_PROFILE}
 aws_region?=ap-northeast-1
 
@@ -7,72 +5,62 @@ aws_region?=ap-northeast-1
 product_name?=myproduct
 env?=dev
 
-frontend_repo?=$(product_name)-frontend
-backend_repo?=$(product_name)-backend
-infra_repo?=$(product_name)-infra
+template_bucket?=$(product_name)-template-$(env)
 
-# TODO: 要変更
-frontend_image?=
-backend_image?=
+.PHONY: $(shell egrep -o ^[a-zA-Z_-]+: $(MAKEFILE_LIST) | sed 's/://')
 
-template_bucket?=template-$(product_name)-$(env)
+all: package deploy
 
-target?=
+package: target-check _lint_cfn _validate_cfn
+	aws cloudformation package --profile $(aws_profile) --region $(aws_region) \
+		--template-file ./stacks/$(target)/master.yml \
+		--output-template-file ./stacks/$(target)/package.yml \
+		--s3-bucket $(template_bucket) \
+		--s3-prefix $(target)
 
-cmd: validate
-	echo $(target)
-
-validate:
-	ifndef $(target)
-		$(error target is not set)
-	else
-		$(error aaaaaa is not set)
-	endif
-
-package:
-	$(call _cfn_validate,$target)
-	@echo "\n"
-	$(call _cfn_package,$target)
-
-deploy:
-	$(call _cfn_deploy,$*)
-
-define _cfn_validate
-	aws cloudformation validate-template \
-		--template-body file://$(shell pwd)/stacks/$1/master.yml \
-		--output text \
-		--profile $(aws_profile) \
-		--region $(aws_region)
-endef
-
-define _cfn_package
-	aws cloudformation package \
-		--template-file ./stacks/$1/master.yml \
-		--s3-bucket $(cfn_template_bucket) \
-		--s3-prefix $1\
-		--output-template-file ./stacks/$1/package.yml \
-		--profile $(aws_profile) \
-		--region $(aws_region)
-endef
-
-# FIXME: disable-rollbackを外す、no-execute-changesetをつける、parameter-overrideをやめる
-define _cfn_deploy
-	aws cloudformation deploy \
-		--template-file ./stacks/$(shell echo $1 |  sed -e 's/-/\//g')/package.yml \
+deploy: target-check set-deploy-option
+	aws cloudformation deploy --profile $(aws_profile) --region $(aws_region) \
+		--template-file ./stacks/$(target)/package.yml \
+		--stack-name $(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
 		--parameter-overrides ProductName=$(product_name) Env=$(env) \
-		--stack-name $(product_name)-$1-$(env) \
-		--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-		--no-fail-on-empty-changeset \
-		--disable-rolleback \
-		--profile $(aws_profile) \
-		--region $(aws_region)
-endef
+		$(option)
 
+# templateバケット作成専用
 create_template_bucket:
-	aws cloudformation deploy \
-		--template-file ./template_bucket.yml \
-		--parameter-overrides ProductName=$(product_name) Env=$(env) BucketName=$(cfn_template_bucket) \
-		--stack-name $(product_name)-cfn-template-bucket-$(env) \
-		--no-fail-on-empty-changeset \
-		--profile $(aws_profile) \
-		--region $(aws_region)
+	aws cloudformation deploy --profile $(aws_profile) --region $(aws_region) \
+		--template-file ./stacks/other/create_template_bucket.yml \
+		--stack-name $(product_name)-template-bucket-$(env) \
+		--parameter-overrides ProductName=$(product_name) Env=$(env) BucketName=$(template_bucket) \
+		--no-fail-on-empty-changeset
+
+# 実行ファイル指定確認
+target-check:
+ifndef target
+	$(error target is not set)
+endif
+
+# 環境ごとにデプロイオプション変更
+## dev: ロールバックするとエラーログも消えるため自動ロールバックはオフ
+## stg,prd: チェンジセットだけ出力してスタックに自動適用しない
+set-deploy-option:
+ifeq ($(env),dev)
+option=--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+	--no-fail-on-empty-changeset \
+	--disable-rollback
+else
+option=--capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+	--no-execute-changeset
+endif
+
+# CFn標準バリデーション
+_validate_cfn:
+	aws cloudformation validate-template --profile $(aws_profile) --region $(aws_region) \
+		--template-body file://$(shell pwd)/stacks/$(target)/master.yml \
+		--output text
+
+# CFn Linter
+## pip3 install cfn-lint
+_lint_cfn:
+	cfn-lint --region $(aws_region) --template ./templates/*/*  --ignore-checks W
+
+# スタック保護
