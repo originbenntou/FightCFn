@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "ProductName",
+    "ParameterValue": "myproduct"
+  },
+  {
+    "ParameterKey": "Env",
+    "ParameterValue": "dev"
+  }
+]

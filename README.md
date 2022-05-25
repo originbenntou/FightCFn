@@ -15,3 +15,9 @@ AWSコンテナ設計・構築「本格」入門 参考
 | Private | C   | 10.0.17.0/24  | DB      |
 | Public  | A   | 10.0.240.0/24 | Bastion |
 | Public  | C   | 10.0.241.0/24 | Bastion |
+
+## コマンド例
+
+```
+make all target=backend/030-application/010-share env=dev
+```

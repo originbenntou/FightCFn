@@ -26,10 +26,14 @@ package: target-check _lint_cfn _validate_cfn
 #		$(option)
 
 deploy: target-check
-	rain deploy -y \
+	rain deploy -y --profile $(aws_profile) \
 		./stacks/$(target)/package.yml \
 		$(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
 		--params $(shell cat $(shell pwd)/stacks/$(target)/parameter-$(env).json | jq -r -c '[.[] | .ParameterKey+"="+.ParameterValue ] | @csv')
+
+rm: target-check
+	rain rm -y --profile $(aws_profile) \
+		$(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env)
 
 # templateバケット作成専用
 create_template_bucket:

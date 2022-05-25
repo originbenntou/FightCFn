@@ -1,0 +1,38 @@
+[
+  {
+    "ParameterKey": "ProductName",
+    "ParameterValue": "myproduct"
+  },
+  {
+    "ParameterKey": "Env",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "ContainerPort",
+    "ParameterValue": "8080"
+  },
+  {
+    "ParameterKey": "Path",
+    "ParameterValue": "*"
+  },
+  {
+    "ParameterKey": "Priority",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "ImageUrl",
+    "ParameterValue": "743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight"
+  },
+  {
+    "ParameterKey": "ContainerCpu",
+    "ParameterValue": "256"
+  },
+  {
+    "ParameterKey": "ContainerMemory",
+    "ParameterValue": "512"
+  },
+  {
+    "ParameterKey": "DesiredCount",
+    "ParameterValue": "2"
+  }
+]

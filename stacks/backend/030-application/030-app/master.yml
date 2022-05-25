@@ -15,25 +15,18 @@ Parameters:
   #########################################
   ContainerPort:
     Type: Number
-    Default: 8080
   Path:
     Type: String
-    Default: '*'
   Priority:
     Type: Number
-    Default: 1
   ImageUrl:
     Type: String
-    Default: '743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight'
   ContainerCpu:
     Type: Number
-    Default: 256
   ContainerMemory:
     Type: Number
-    Default: 512
   DesiredCount:
     Type: Number
-    Default: 2
 
 Resources:
   #########################################
@@ -42,11 +35,11 @@ Resources:
   PublicLoadBalancer:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../templates/ec2/load_balancer.yml'
+      TemplateURL: '../../../../templates/ec2/load_balancer.yml'
       Parameters:
         Scheme: 'internet-facing'
         Subnets: !Join [ ',', [!ImportValue PublicSubnetA, !ImportValue PublicSubnetC] ]
-        SecurityGroups: !Join [ ',', [!GetAtt PublicLoadBalancerSecurityGroup.Outputs.SecurityGroupId] ]
+        SecurityGroups: !Join [ ',', [!ImportValue PublicLoadBalancerSecurityGroup] ]
         ProductName: !Ref ProductName
         Env: !Ref Env
         Name: !Sub public-lb-${Env}
@@ -57,7 +50,7 @@ Resources:
   DefaultTargetGroupForPublicALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../templates/ec2/target_group.yml'
+      TemplateURL: '../../../../templates/ec2/target_group.yml'
       Parameters:
         VpcId: !ImportValue VPC
         ProductName: !Ref ProductName
@@ -66,7 +59,7 @@ Resources:
   DefaultTargetGroupListenerForPublicALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../templates/ec2/target_group_listener.yml'
+      TemplateURL: '../../../../templates/ec2/target_group_listener.yml'
       Parameters:
         TargetGroupArn: !GetAtt DefaultTargetGroupForPublicALB.Outputs.TargetGroupArn
         LoadBalancerArn: !GetAtt PublicLoadBalancer.Outputs.LoadBalancerArn
@@ -115,7 +108,7 @@ Resources:
   #  PrivateLoadBalancer:
   #    Type: AWS::CloudFormation::Stack
   #    Properties:
-  #      TemplateURL: '../../../templates/ec2/load_balancer.yml'
+  #      TemplateURL: '../../../../templates/ec2/load_balancer.yml'
   #      Parameters:
   #        Scheme: 'internal'
   #        Subnets: !Join [ ',', [!ImportValue PrivateSubnetA, !ImportValue PrivateSubnetC] ]
@@ -129,7 +122,7 @@ Resources:
   #  DefaultTargetGroupForPrivateALB:
   #    Type: AWS::CloudFormation::Stack
   #    Properties:
-  #      TemplateURL: '../../../templates/ec2/target_group.yml'
+  #      TemplateURL: '../../../../templates/ec2/target_group.yml'
   #      Parameters:
   #        VpcId: !ImportValue VPC
   #        ProductName: !Ref ProductName
@@ -138,7 +131,7 @@ Resources:
   #  DefaultTargetGroupListenerForPrivateALB:
   #    Type: AWS::CloudFormation::Stack
   #    Properties:
-  #      TemplateURL: '../../../templates/ec2/target_group_listener.yml'
+  #      TemplateURL: '../../../../templates/ec2/target_group_listener.yml'
   #      Parameters:
   #        TargetGroupArn: !GetAtt DefaultTargetGroupForPrivateALB.Outputs.TargetGroupArn
   #        LoadBalancerArn: !GetAtt PrivateLoadBalancer.Outputs.LoadBalancerArn
@@ -149,7 +142,7 @@ Resources:
   ECSCluster:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../templates/ecs/cluster.yml'
+      TemplateURL: '../../../../templates/ecs/cluster.yml'
       Parameters:
         ProductName: !Ref ProductName
         Env: !Ref Env
@@ -161,7 +154,7 @@ Resources:
   ECSTask:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../templates/ecs/task.yml'
+      TemplateURL: '../../../../templates/ecs/task.yml'
       Parameters:
         ContainerCpu: !Ref ContainerCpu
         ContainerMemory: !Ref ContainerMemory
@@ -182,8 +175,10 @@ Resources:
     DependsOn:
       - ECSCluster
       - ECSTask
+      - TargetGroupForECS
+      - LoadBalancerRule
     Properties:
-      TemplateURL: '../../../templates/ecs/service.yml'
+      TemplateURL: '../../../../templates/ecs/service.yml'
       Parameters:
         ClusterArn: !GetAtt ECSCluster.Outputs.ECSClusterArn
         DesiredCount: !Ref DesiredCount
@@ -191,7 +186,7 @@ Resources:
         Subnets: !Join [ ',', [!ImportValue PrivateSubnetA, !ImportValue PrivateSubnetC] ]
         TaskDefinitionArn: !GetAtt ECSTask.Outputs.TaskDefinitionArn
         ContainerPort: !Ref ContainerPort
-        TargetGroupArn: !ImportValue TargetGroupForECS
+        TargetGroupArn: !Ref TargetGroupForECS
         ProductName: !Ref ProductName
         Env: !Ref Env
         Name: !Sub ${ProductName}-service-${Env}
@@ -199,7 +194,3 @@ Resources:
 Outputs:
   PublicLoadBalancerDnsName:
     Value: !GetAtt PublicLoadBalancer.Outputs.LoadBalancerDnsName
-  TargetGroupForECS:
-    Value: !Ref TargetGroupForECS
-    Export:
-      Name: TargetGroupForECS

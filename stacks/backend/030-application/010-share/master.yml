@@ -14,7 +14,7 @@ Resources:
   Cloud9ForDBOperation:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../templates/cloud9/environment_ec2.yml'
+      TemplateURL: '../../../../templates/cloud9/environment_ec2.yml'
       Parameters:
         SubnetId: !ImportValue PublicSubnetAForCloud9
         ProductName: !Ref ProductName
