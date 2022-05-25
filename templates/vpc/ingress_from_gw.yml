@@ -11,6 +11,8 @@ Parameters:
     Type: String
   ToPort:
     Type: String
+  IpProtocol:
+    Type: String
 
 Conditions:
   isEmptyCidrIp: !Equals [ !Ref CidrIp, '' ]
@@ -25,7 +27,7 @@ Resources:
       Description: !Ref AWS::StackName
       GroupId: !Ref GroupId
       CidrIp: !Ref CidrIp
-      IpProtocol: tcp
+      IpProtocol: !Ref IpProtocol
       FromPort: !Ref FromPort
       ToPort: !Ref ToPort
   SecurityGroupIngressCidrIpv6:
@@ -35,12 +37,14 @@ Resources:
       Description: !Ref AWS::StackName
       GroupId: !Ref GroupId
       CidrIpv6: !Ref CidrIpv6
-      IpProtocol: tcp
+      IpProtocol: !Ref IpProtocol
       FromPort: !Ref FromPort
       ToPort: !Ref ToPort
 
 Outputs:
   SecurityGroupIngressCidrIp:
+    Condition: isEmptyCidrIpv6
     Value: !Ref SecurityGroupIngressCidrIp
   SecurityGroupIngressCidrIpv6:
+    Condition: isEmptyCidrIp
     Value: !Ref SecurityGroupIngressCidrIpv6

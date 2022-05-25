@@ -18,20 +18,18 @@ package: target-check _lint_cfn _validate_cfn
 		--s3-bucket $(template_bucket) \
 		--s3-prefix $(target)
 
-# TODO: rainためしたい！
-deploy: target-check set-deploy-option
-	rain deploy -y \
-		./stacks/$(target)/package.yml \
-		$(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
-		--params $(shell cat $(shell pwd)/stacks/$(target)/parameter-$(env).json | jq -r -c '[.[] | .ParameterKey+"="+.ParameterValue ] | @csv')
-
-
 #deploy: target-check set-deploy-option
 #	aws cloudformation deploy --profile $(aws_profile) --region $(aws_region) \
 #		--template-file ./stacks/$(target)/package.yml \
 #		--stack-name $(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
 #		--parameter-overrides file://$(shell pwd)/stacks/$(target)/parameter-$(env).json
 #		$(option)
+
+deploy: target-check
+	rain deploy -y \
+		./stacks/$(target)/package.yml \
+		$(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
+		--params $(shell cat $(shell pwd)/stacks/$(target)/parameter-$(env).json | jq -r -c '[.[] | .ParameterKey+"="+.ParameterValue ] | @csv')
 
 # templateバケット作成専用
 create_template_bucket:
