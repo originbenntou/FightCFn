@@ -16,6 +16,7 @@ endif
 
 # CFn実行モード選択
 mode:=$(shell echo 'rain\ncloudformation' | peco)
+# FIXME: ここで止まらない...
 ifndef mode
 	$(error mode is not set)
 endif
