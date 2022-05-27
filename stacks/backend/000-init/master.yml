@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  #########################################
+  # For Global
+  #########################################
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+
+  RepositoryName:
+    Type: String
+
+Resources:
+  #########################################
+  # CodeCommit Repo For Backend
+  #########################################
+  CodeCommitRepositoryForBackend:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/codecommit/repository.yml'
+      Parameters:
+        RepositoryName: !Ref RepositoryName
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-codecommit-backend-${Env}

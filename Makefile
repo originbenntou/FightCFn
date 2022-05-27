@@ -62,9 +62,6 @@ else
 	$(call _aws-deploy)
 endif
 
-test:
-	cat stacks/backend/010-network/master.yml | yq e '.Parameters | keys | .[]' | xargs -I@ bash -c 'if [ @ = Env ]; then echo @; fi'
-
 # スタック削除
 rm:
 	@echo "####### RM MODE: $(mode) #######"
@@ -81,7 +78,7 @@ protect-stack:
 
 # aws package
 define _aws-package
-	$(eval template_bucket_name:=$(product_name)-cfn-templateaabaaaaaaabaaaaa-$(env))
+	$(eval template_bucket_name:=$(product_name)-cfn-template-$(env))
 
 	$(eval exist:=$(shell aws s3api head-bucket --profile $(aws_profile) --region $(aws_region) \
 		--bucket $(template_bucket_name) 2>&1 | grep -cE '404'))
@@ -117,14 +114,4 @@ define _create-template-bucket
 		--template-file ./stacks/other/create_template_bucket.yml \
 		--stack-name $1 \
 		--parameter-overrides ProductName=$(product_name) Env=$(env) BucketName=$1
-endef
-
-# 本プロダクトのECRレジストリ作成
-define _create-ecr-registry
-	echo 'not implement'
-endef
-
-# 本プロダクトのCodeCommintリポジトリ作成
-define _create-codecommit-repository
-	echo 'not implement'
 endef

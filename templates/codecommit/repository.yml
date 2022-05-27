@@ -9,28 +9,26 @@ Parameters:
       - dev
       - stg
       - prd
+  Name:
+    Type: String
 
   RepositoryName:
     Type: String
-    Default: fight
 
 Resources:
   CodeCommitRepository:
     Type: AWS::CodeCommit::Repository
     DeletionPolicy: Retain
     Properties:
+      RepositoryName: !Ref RepositoryName
+      RepositoryDescription: !Ref RepositoryName
       Tags:
         - Key: 'ProductName'
           Value: !Ref ProductName
         - Key: 'Env'
           Value: !Ref Env
-      RepositoryName: !Ref RepositoryName
-      RepositoryDescription: ''
-#      Code:
-#        BranchName: main
-#        S3:
-#          Bucket: fight-codecommit-dev
-#          Key: fight.zip
+        - Key: 'Name'
+          Value: !Ref Name
 
 Outputs:
   CodeCommitRepository:

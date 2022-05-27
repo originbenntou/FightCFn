@@ -28,14 +28,28 @@ Resources:
         Name: !Sub ${ProductName}-cloud9-${Env}
 
   #########################################
+  # ArtifactBucket For Pipeline
+  #########################################
+  ArtifactBucketForPipeline:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../../templates/s3/bucket.yml'
+      Parameters:
+        BucketName: !Sub ${ProductName}-artifact-pipeline-${Env}
+        ExpirationInDays: 30
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-artifact-pipeline-${Env}
+
+  #########################################
   # CodeBuild For Pipeline
   #########################################
   CodeBuildProjectForPipeline:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: '../../../../templates/cloud9/environment_ec2.yml'
+      TemplateURL: '../../../../templates/codebuild/project.yml'
       Parameters:
         ImageUrl: !Ref ImageUrl
         ProductName: !Ref ProductName
         Env: !Ref Env
-        Name: !Sub ${ProductName}-cloud9-${Env}
+        Name: !Sub ${ProductName}-codebuild-${Env}

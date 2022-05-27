@@ -17,7 +17,6 @@ Parameters:
   ExpirationInDays:
     Type: Number
 
-
 Conditions:
   isEmptExpirationInDays: !Equals [ !Ref ExpirationInDays, '' ]
 

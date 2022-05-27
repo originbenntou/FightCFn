@@ -8,12 +8,16 @@
     "ParameterValue": "dev"
   },
   {
-    "ParameterKey": "VPCCidrBlock",
-    "ParameterValue": "10.0.0.0/16"
-  },
-  {
     "ParameterKey": "ImageUrl",
     "ParameterValue": "743530693495.dkr.ecr.ap-northeast-1.amazonaws.com/fight"
+  },
+  {
+    "ParameterKey": "RepositoryName",
+    "ParameterValue": "fight"
+  },
+  {
+    "ParameterKey": "VPCCidrBlock",
+    "ParameterValue": "10.0.0.0/16"
   },
   {
     "ParameterKey": "ContainerPort",

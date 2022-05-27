@@ -360,7 +360,7 @@ Resources:
                   - 'ecr:UploadLayerPart'
                   - 'ecr:CompleteLayerUpload'
                   - 'ecr:PutImage'
-              - Resource: !Sub 'arn:aws:s3:::${ArtifactBucket}/*'
+              - Resource: !Sub 'arn:aws:s3:::${ProductName}-artifact-pipeline-${Env}/*'
                 Effect: Allow
                 Action:
                   - 's3:GetObject'
@@ -383,7 +383,7 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Resource:
-                  - !Sub 'arn:aws:s3:::${ArtifactBucket}/*'
+                  - !Sub 'arn:aws:s3:::${ProductName}-artifact-pipeline-${Env}/*'
                 Effect: Allow
                 Action:
                   - 's3:PutObject'
