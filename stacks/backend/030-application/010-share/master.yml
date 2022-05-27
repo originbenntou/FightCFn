@@ -10,13 +10,32 @@ Parameters:
       - stg
       - prd
 
+  ImageUrl:
+    Type: String
+
 Resources:
+  #########################################
+  # Cloud9 For DBOperation
+  #########################################
   Cloud9ForDBOperation:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: '../../../../templates/cloud9/environment_ec2.yml'
       Parameters:
         SubnetId: !ImportValue PublicSubnetAForCloud9
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-cloud9-${Env}
+
+  #########################################
+  # CodeBuild For Pipeline
+  #########################################
+  CodeBuildProjectForPipeline:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../../templates/cloud9/environment_ec2.yml'
+      Parameters:
+        ImageUrl: !Ref ImageUrl
         ProductName: !Ref ProductName
         Env: !Ref Env
         Name: !Sub ${ProductName}-cloud9-${Env}

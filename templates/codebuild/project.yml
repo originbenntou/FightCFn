@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  ProductName:
+    Type: String
+  Env:
+    Type: String
+    AllowedValues:
+      - dev
+      - stg
+      - prd
+  Name:
+    Type: String
+
+  ImageUrl:
+    Type: String
+
+Resources:
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub codebuild-${Env}
+      ServiceRole: !ImportValue CodeBuildServiceRole
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+      Environment:
+        PrivilegedMode: true
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: 'aws/codebuild/amazonlinux2-x86_64-standard:3.0'
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Type: PLAINTEXT
+            Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Type: PLAINTEXT
+            Name: IMAGE_REPO_NAME
+            Value: !Ref ImageUrl
+      TimeoutInMinutes: 5
+      QueuedTimeoutInMinutes: 5
+      # LogsConfig: ...
+      Tags:
+        - Key: 'ProductName'
+          Value: !Ref ProductName
+        - Key: 'Env'
+          Value: !Ref Env
+        - Key: 'Name'
+          Value: !Ref Name
+
+Outputs:
+  CodeBuildProject:
+    Value: !Ref CodeBuildProject

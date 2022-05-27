@@ -22,11 +22,16 @@ ifndef mode
 endif
 
 # 実行スタック選択
-target:=$(shell find stacks -type f -name master.yml | sed -e 's/stacks\///g' | sed -e 's/\/master.yml//g' | sort | peco)
-ifndef target
-	$(error target is not set)
+stack:=$(shell ls stacks | peco)
+ifndef stack
+	$(error stack is not set)
 endif
 
+# 実行レイヤー選択
+layer:=$(shell find stacks/$(stack) -type f -name master.yml | sed -e 's/stacks\/$(stack)\///g' | sed -e 's/\/master.yml//g' | sort | peco)
+ifndef layer
+	$(error layer is not set)
+endif
 
 .PHONY: $(shell egrep -o ^[a-zA-Z_-]+: $(MAKEFILE_LIST) | sed 's/://')
 
@@ -38,22 +43,34 @@ lint:
 deploy: lint
 	@echo "####### DEPLOY MODE: $(mode) #######"
 ifeq ($(mode), rain)
+	# master.ymlから使用するParametersのKeyを集め、parameter.jsonから対応する値を取り出す
+	# Key1=Value1 Key2=Value2 ... の形式で変数に格納
+	$(eval params:=$(shell \
+			cat stacks/$(stack)/$(layer)/master.yml \
+				| yq e '.Parameters | keys | .[]' \
+				| xargs -I@ bash -c "cat stacks/$(stack)/parameter-dev.json \
+					| jq -r '.[] | select(.ParameterKey == \"@\") \
+					| .ParameterKey + \"=\" + .ParameterValue'"))
+
 	rain deploy -y --profile $(aws_profile) --region $(aws_region) \
-		./stacks/$(target)/master.yml \
-		$(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
-		--params $(shell cat $(shell pwd)/stacks/$(target)/parameter-$(env).json | jq -r -c '[.[] | .ParameterKey+"="+.ParameterValue ] | @csv')
+		./stacks/$(stack)/$(layer)/master.yml \
+		$(product_name)-$(shell echo $(stack)/$(layer) |  sed -e 's/\//-/g')-$(env) \
+		--params $(shell echo $(params) | sed -e 's/ /,/g')
 else
 	$(call _aws-package)
 	@echo "\n"
 	$(call _aws-deploy)
 endif
 
+test:
+	cat stacks/backend/010-network/master.yml | yq e '.Parameters | keys | .[]' | xargs -I@ bash -c 'if [ @ = Env ]; then echo @; fi'
+
 # スタック削除
 rm:
 	@echo "####### RM MODE: $(mode) #######"
 ifeq ($(mode), rain)
 	rain rm -y --profile $(aws_profile) --region $(aws_region) \
-		$(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env)
+		$(product_name)-$(shell echo $(stack)/$(layer) |  sed -e 's/\//-/g')-$(env)
 else
 	@echo 'not implement'
 endif
@@ -77,10 +94,10 @@ define _aws-package
 	@echo "####### UPLOAD TEMPLATE & PACKAGE STACK #######"
 
 	aws cloudformation package --profile $(aws_profile) --region $(aws_region) \
-		--template-file ./stacks/$(target)/master.yml \
-		--output-template-file ./stacks/$(target)/package.yml \
+		--template-file ./stacks/$(stack)/$(layer)/master.yml \
+		--output-template-file ./stacks/$(stack)/$(layer)/package.yml \
 		--s3-bucket $(template_bucket_name) \
-		--s3-prefix $(target)
+		--s3-prefix $(stack)/$(layer)
 endef
 
 # aws deploy
@@ -88,9 +105,9 @@ define _aws-deploy
 	@echo "####### DEPLOY STACK #######"
 
 	aws cloudformation deploy --profile $(aws_profile) --region $(aws_region) \
-		--template-file ./stacks/$(target)/package.yml \
-		--stack-name $(product_name)-$(shell echo $(target) |  sed -e 's/\//-/g')-$(env) \
-		--parameter-overrides file://$(shell pwd)/stacks/$(target)/parameter-$(env).json \
+		--template-file ./stacks/$(stack)/$(layer)/package.yml \
+		--stack-name $(product_name)-$(shell echo $(stack)/$(layer) |  sed -e 's/\//-/g')-$(env) \
+		--parameter-overrides file://$(shell pwd)/stacks/$(stack)/parameter-$(env).json \
 		$(option)
 endef
 
