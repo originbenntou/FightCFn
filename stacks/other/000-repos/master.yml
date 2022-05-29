@@ -29,3 +29,16 @@ Resources:
         ProductName: !Ref ProductName
         Env: !Ref Env
         Name: !Sub ${ProductName}-codecommit-backend-${Env}
+
+  #########################################
+  # CodeCommit Repo For Backend
+  #########################################
+  ECRRepositoryForBackend:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: '../../../templates/ecr/repository.yml'
+      Parameters:
+        RepositoryName: !Ref RepositoryName
+        ProductName: !Ref ProductName
+        Env: !Ref Env
+        Name: !Sub ${ProductName}-ecr-backend-${Env}
