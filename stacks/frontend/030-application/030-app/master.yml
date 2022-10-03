@@ -1,8 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
-  BucketName:
+  StaticBucketName:
     Type: String
-    Default: fufu-static
+  WAFv2WebACLARN:
+    Type: String
 
 Resources:
   OriginAccessIdentity:
@@ -14,7 +15,7 @@ Resources:
   Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref BucketName
+      BucketName: !Ref StaticBucketName
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -23,7 +24,7 @@ Resources:
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref BucketName
+      Bucket: !Ref StaticBucketName
       PolicyDocument:
         Statement:
           Action:
@@ -32,7 +33,7 @@ Resources:
           Resource: !Join
             - ""
             - - "arn:aws:s3:::"
-              - !Ref BucketName
+              - !Ref StaticBucketName
               - "/*"
           Principal:
             AWS: !Join
@@ -70,6 +71,7 @@ Resources:
 #            ResponseCode: 200
 #            ErrorCachingMinTTL: 60
         PriceClass: PriceClass_200
+        WebACLId: !Ref WAFv2WebACLARN
 
 Outputs:
   DomainName:
@@ -77,3 +79,7 @@ Outputs:
       Fn::GetAtt:
         - Distribution
         - DomainName
+  Distribution:
+    Value: !Ref Distribution
+    Export:
+      Name: StaticDistribution

@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  StaticBucketName:
+    Type: String
+  WafBucketName:
+    Type: String
+  AthenaBucketName:
+    Type: String
+
+Resources:
+  S3BacketForWaflog:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref WafBucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  S3BacketForAthenaQuery:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref AthenaBucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  WAFv2IPSet:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Addresses:
+        - 125.13.237.148/32
+      IPAddressVersion: IPV4
+      Name: "MyWAFv2IPSet"
+      Scope: "CLOUDFRONT"
+
+  WAFv2IPSetV6:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Addresses:
+        - 1111:0000:0000:0000:0000:0000:0000:0111/128
+      IPAddressVersion: IPV6
+      Name: "MyWAFv2IPSetV6"
+      Scope: "CLOUDFRONT"
+
+  WebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub ${StaticBucketName}-web-acl
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub ${StaticBucketName}-web-acl
+        SampledRequestsEnabled: true
+      Rules:
+        - Name: "MyWAFv2WebACLRuleIPSet"
+          Action:
+            Allow: {}
+          Priority: 0
+          Statement:
+            IPSetReferenceStatement:
+              Arn: !GetAtt WAFv2IPSet.Arn
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: "MyWAFv2WebACLRuleIPSetMetric"
+            SampledRequestsEnabled: true
+        - Name: "MyWAFv2WebACLRuleIPSetV6"
+          Action:
+            Allow: {}
+          Priority: 1
+          Statement:
+            IPSetReferenceStatement:
+              Arn: !GetAtt WAFv2IPSetV6.Arn
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: "MyWAFv2WebACLRuleIPSetV6Metric"
+            SampledRequestsEnabled: true
+
+#  WAFLogConfig:
+#    Type: AWS::WAFv2::LoggingConfiguration
+#    Properties:
+#      LogDestinationConfigs:
+#        - !GetAtt S3BacketForWaflog.Arn
+#      ResourceArn: !GetAtt WebAcl.Arn
+
+#  WebACLAssociation:
+#    Type: AWS::WAFv2::WebACLAssociation
+#    Properties:
+#      ResourceArn: !Ref ResourceArn
+#      WebACLArn: !GetAtt WebAcl.Arn
+
+Outputs:
+  WebAcl:
+    Value: !GetAtt WebAcl.Arn

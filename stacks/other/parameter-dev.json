@@ -10,9 +10,5 @@
   {
     "ParameterKey": "AthenaBucketName",
     "ParameterValue": "afufu-panda-athena-dev"
-  },
-  {
-    "ParameterKey": "WAFv2WebACLARN",
-    "ParameterValue": "arn:aws:wafv2:us-east-1:743530693495:global/webacl/afufu-panda-dev-web-acl/9896e817-48db-48be-bf5c-b6249db5e76c"
   }
 ]
